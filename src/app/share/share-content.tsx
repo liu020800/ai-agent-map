@@ -7,7 +7,7 @@ import { levelName } from "@/lib/level";
 import { generateAvatarSvg } from "@/lib/avatar";
 import { FadeIn } from "@/components/motion-wrapper";
 import { motion } from "framer-motion";
-import { Download, Copy, RefreshCw, Share2 } from "lucide-react";
+import { Download, Copy, RefreshCw, Share2, Sparkles } from "lucide-react";
 
 type CardData = {
   nickname: string;
@@ -29,11 +29,14 @@ export default function ShareContent() {
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [aiAvatarUrl, setAiAvatarUrl] = useState<string | null>(null);
+  const [avatarLoading, setAvatarLoading] = useState(false);
 
   const [name, setName] = useState("AI 用户");
   const [level, setLevel] = useState(4);
   const [tool, setTool] = useState("Codex + Claude Code");
 
+  // Fetch card data if slug provided
   useEffect(() => {
     if (!slug) return;
     setLoading(true);
@@ -51,7 +54,32 @@ export default function ShareContent() {
       .finally(() => setLoading(false));
   }, [slug]);
 
-  const avatarSvg = useMemo(() => generateAvatarSvg(card?.avatar_seed || name + level), [card?.avatar_seed, name, level]);
+  // Generate AI avatar
+  const generateAiAvatar = useCallback(async () => {
+    setAvatarLoading(true);
+    try {
+      const res = await fetch("/api/generate-avatar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          seed: card?.avatar_seed || name + Date.now(),
+          level: card?.ai_level || level,
+          tools: card?.tools || [tool],
+        }),
+      });
+      const data = await res.json();
+      if (data.url) setAiAvatarUrl(data.url);
+    } catch {} finally {
+      setAvatarLoading(false);
+    }
+  }, [card, name, level, tool]);
+
+  // Auto-generate avatar on load
+  useEffect(() => {
+    if (card || slug) generateAiAvatar();
+  }, [card, slug, generateAiAvatar]);
+
+  const pixelAvatarSvg = useMemo(() => generateAvatarSvg(card?.avatar_seed || name + level), [card?.avatar_seed, name, level]);
   const displayName = card?.nickname || name;
   const displayLevel = card ? levelName(card.ai_level) : levelName(level);
   const displayTool = card?.primary_tool || tool;
@@ -131,6 +159,9 @@ export default function ShareContent() {
                 主力工具
                 <input value={tool} onChange={(e) => setTool(e.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 p-3 text-white focus:border-indigo-500/50 focus:outline-none" />
               </label>
+              <button onClick={generateAiAvatar} disabled={avatarLoading} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">
+                <Sparkles className="h-4 w-4" /> {avatarLoading ? "AI 生成头像中..." : "生成 AI 头像"}
+              </button>
             </section>
           </FadeIn>
         )}
@@ -139,12 +170,22 @@ export default function ShareContent() {
           <section className="flex items-stretch">
             <div ref={cardRef} className="flex w-full flex-col justify-between overflow-hidden rounded-2xl border border-indigo-500/20 bg-gradient-to-br from-indigo-600/20 via-slate-900 to-blue-600/10 p-8 shadow-2xl shadow-indigo-500/10">
               <div className="flex items-start justify-between">
-                <div>
+                <div className="flex-1">
                   <p className="text-xs font-medium uppercase tracking-widest text-indigo-300/70">AI Agent 用户身份卡</p>
                   <p className="mt-4 text-3xl font-bold text-white">{displayName}</p>
                   <p className="mt-2 text-lg font-semibold text-indigo-300">{displayLevel}</p>
                 </div>
-                <div className="flex-shrink-0" dangerouslySetInnerHTML={{ __html: avatarSvg }} />
+                <div className="ml-4 flex-shrink-0">
+                  {aiAvatarUrl ? (
+                    <img src={aiAvatarUrl} alt="AI Avatar" className="h-24 w-24 rounded-2xl border-2 border-indigo-500/30 object-cover shadow-lg shadow-indigo-500/20" />
+                  ) : avatarLoading ? (
+                    <div className="flex h-24 w-24 items-center justify-center rounded-2xl border-2 border-indigo-500/30 bg-white/5">
+                      <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-400 border-t-transparent" />
+                    </div>
+                  ) : (
+                    <div className="h-24 w-24 overflow-hidden rounded-2xl border-2 border-indigo-500/30" dangerouslySetInnerHTML={{ __html: pixelAvatarSvg }} />
+                  )}
+                </div>
               </div>
               <div className="mt-6 space-y-2">
                 {userNumber && (
