@@ -17,24 +17,31 @@ export async function onRequestPost(context) {
     const normalizedUserType = body.user_type === 'agent' ? 'agent' : 'app';
     const aiLevel = computeLevel(normalizedUserType, body.tools);
 
-    const insertResult = await tryInsert(supabaseUrl, serviceKey, {
+    // Try insert with all fields
+    let payload = {
       province: body.province,
       city: body.city || null,
       user_type: normalizedUserType,
       tools: body.tools,
       ai_level: aiLevel,
-      ip,
-      user_agent: userAgent,
-    });
+    };
 
-    if (!insertResult.ok && isMissingColumnError(insertResult.errorText, 'ip')) {
-      const fallback = await tryInsert(supabaseUrl, serviceKey, {
+    // Add optional fields if provided
+    if (body.frequency) payload.frequency = body.frequency;
+    if (body.occupation) payload.occupation = body.occupation;
+
+    const insertResult = await tryInsert(supabaseUrl, serviceKey, payload);
+
+    // Fallback without optional columns if they don't exist
+    if (!insertResult.ok && isMissingColumnError(insertResult.errorText)) {
+      const fallbackPayload = {
         province: body.province,
         city: body.city || null,
         user_type: normalizedUserType,
         tools: body.tools,
         ai_level: aiLevel,
-      });
+      };
+      const fallback = await tryInsert(supabaseUrl, serviceKey, fallbackPayload);
       if (!fallback.ok) return jsonResponse({ error: fallback.errorText }, 500);
       const row = fallback.row;
       return jsonResponse({ id: row.id, ai_level: row.ai_level ?? aiLevel }, 201);
@@ -77,10 +84,10 @@ async function tryInsert(supabaseUrl, serviceKey, payload) {
   return { ok: true, errorText: null, row };
 }
 
-function isMissingColumnError(text, column) {
+function isMissingColumnError(text) {
   try {
     const obj = JSON.parse(text);
-    return obj?.code === 'PGRST204' && (obj?.message || '').includes(column);
+    return obj?.code === 'PGRST204';
   } catch (e) {
     return false;
   }

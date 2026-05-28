@@ -4,5 +4,6 @@
   <url><loc>https://liusq.icu/survey</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
   <url><loc>https://liusq.icu/ranking</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
   <url><loc>https://liusq.icu/map</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://liusq.icu/trends</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
   <url><loc>https://liusq.icu/share</loc><changefreq>daily</changefreq><priority>0.7</priority></url>
 </urlset>
