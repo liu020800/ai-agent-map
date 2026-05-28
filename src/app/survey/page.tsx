@@ -1,8 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { supabase } from "@/lib/supabase";
-import { computeLevel, levelLabel } from "@/lib/level";
+import { levelLabel } from "@/lib/level";
 
 const APP_TOOLS = ["豆包", "DeepSeek", "Kimi", "ChatGPT", "Gemini", "通义", "元宝"];
 const AGENT_TOOLS = ["OpenClaw", "Hermes", "Codex", "Claude Code", "OpenCode", "Cursor", "Dify", "n8n Agent"];
@@ -32,30 +31,23 @@ export default function SurveyPage() {
     setMessage("");
     setResultLevel(null);
 
-    const aiLevel = computeLevel(userType, selectedTools);
+    try {
+      const res = await fetch("/api/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ province, city: city.trim() || undefined, user_type: userType, tools: selectedTools }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body?.error ?? "提交失败");
 
-    const { error, data } = await supabase
-      .from("users")
-      .insert({
-        province,
-        city: city.trim() || null,
-        user_type: userType,
-        tools: selectedTools,
-        ai_level: aiLevel,
-      })
-      .select("id, ai_level")
-      .single();
-
-    if (error) {
+      setStatus("success");
+      setMessage("提交成功！感谢参与 AI Agent 使用情况调查。");
+      setResultLevel(body.ai_level ?? null);
+      setSelectedTools([]);
+    } catch (e) {
       setStatus("error");
-      setMessage(error.message);
-      return;
+      setMessage(e instanceof Error ? e.message : "提交失败");
     }
-
-    setStatus("success");
-    setMessage("提交成功！感谢参与 AI Agent 使用情况调查。");
-    setResultLevel(data.ai_level ?? aiLevel);
-    setSelectedTools([]);
   }
 
   return (
@@ -68,12 +60,9 @@ export default function SurveyPage() {
           <label className="block text-sm text-slate-300">
             省份/直辖市
             <select value={province} onChange={(e) => setProvince(e.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-black/30 p-3 text-white">
-              {PROVINCES.map((item) => (
-                <option key={item} value={item}>{item}</option>
-              ))}
+              {PROVINCES.map((item) => (<option key={item} value={item}>{item}</option>))}
             </select>
           </label>
-
           <label className="block text-sm text-slate-300">
             城市（可选）
             <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="例如：杭州" className="mt-2 w-full rounded-xl border border-white/10 bg-black/30 p-3 text-white placeholder:text-slate-500" />
@@ -113,7 +102,6 @@ export default function SurveyPage() {
         </button>
 
         {message ? <p className={`text-sm ${status === "success" ? "text-emerald-400" : "text-red-400"}`}>{message}</p> : null}
-
         {status === "success" && resultLevel ? (
           <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-emerald-200">
             你的 AI 等级：<span className="font-semibold text-white">{levelLabel(resultLevel)}</span>
