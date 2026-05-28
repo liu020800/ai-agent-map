@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { computeLevel } from "@/lib/level";
 import type { SurveyPayload } from "@/lib/types";
 
 export async function POST(request: Request) {
@@ -11,6 +12,7 @@ export async function POST(request: Request) {
     }
 
     const normalizedUserType = body.user_type === "agent" ? "agent" : "app";
+    const aiLevel = computeLevel(normalizedUserType, body.tools);
 
     const { data, error } = await supabase
       .from("users")
@@ -19,15 +21,16 @@ export async function POST(request: Request) {
         city: body.city ?? null,
         user_type: normalizedUserType,
         tools: body.tools,
+        ai_level: aiLevel,
       })
-      .select("id")
+      .select("id, ai_level")
       .single();
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ id: data.id }, { status: 201 });
+    return NextResponse.json({ id: data.id, ai_level: data.ai_level }, { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: "Unexpected server error" }, { status: 500 });
   }

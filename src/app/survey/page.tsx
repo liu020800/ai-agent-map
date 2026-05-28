@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { levelLabel } from "@/lib/level";
 
 const APP_TOOLS = ["豆包", "DeepSeek", "Kimi", "ChatGPT", "Gemini", "通义", "元宝"];
 const AGENT_TOOLS = ["OpenClaw", "Hermes", "Codex", "Claude Code", "OpenCode", "Cursor", "Dify", "n8n Agent"];
@@ -14,6 +15,7 @@ export default function SurveyPage() {
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
+  const [resultLevel, setResultLevel] = useState<number | null>(null);
 
   const toolOptions = userType === "app" ? APP_TOOLS : AGENT_TOOLS;
 
@@ -29,6 +31,7 @@ export default function SurveyPage() {
 
     setStatus("loading");
     setMessage("");
+    setResultLevel(null);
 
     try {
       const response = await fetch("/api/submit", {
@@ -47,8 +50,10 @@ export default function SurveyPage() {
         throw new Error(body?.error ?? "提交失败");
       }
 
+      const body = (await response.json()) as { id?: string; ai_level?: number };
       setStatus("success");
       setMessage("提交成功！感谢参与 AI Agent 使用情况调查。");
+      setResultLevel(body.ai_level ?? null);
       setSelectedTools([]);
     } catch (error) {
       setStatus("error");
@@ -111,6 +116,12 @@ export default function SurveyPage() {
         </button>
 
         {message ? <p className={`text-sm ${status === "success" ? "text-emerald-400" : "text-red-400"}`}>{message}</p> : null}
+
+        {status === "success" && resultLevel ? (
+          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-emerald-200">
+            你的 AI 等级：<span className="font-semibold text-white">{levelLabel(resultLevel)}</span>
+          </div>
+        ) : null}
       </form>
     </main>
   );
