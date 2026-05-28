@@ -1,8 +1,13 @@
+"use client";
+
 import Link from "next/link";
+import dynamic from "next/dynamic";
+
+const HomeStats = dynamic(() => import("@/components/home-stats"), { ssr: false });
 
 export default function HomePage() {
   return (
-    <main className="relative mx-auto flex min-h-screen max-w-5xl flex-col items-center justify-center gap-10 px-6 py-16 text-center">
+    <main className="relative mx-auto flex min-h-screen max-w-6xl flex-col items-center justify-center gap-10 px-6 py-16 text-center">
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(60%_50%_at_50%_0%,rgba(99,102,241,0.18),transparent_60%)]" />
       <p className="rounded-full border border-white/10 bg-white/5 px-4 py-1 text-xs tracking-wide text-slate-300 backdrop-blur">
         MVP · AI Agent 用户调查网站
@@ -26,19 +31,21 @@ export default function HomePage() {
         >
           查看排行榜
         </Link>
+        <Link
+          href="/map"
+          className="rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-sm font-semibold text-slate-200 backdrop-blur transition hover:border-white/20 hover:bg-white/10"
+        >
+          打开 AI 地图
+        </Link>
+        <Link
+          href="/share"
+          className="rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-sm font-semibold text-slate-200 backdrop-blur transition hover:border-white/20 hover:bg-white/10"
+        >
+          生成分享卡片
+        </Link>
       </div>
-      <section className="grid w-full max-w-3xl grid-cols-1 gap-4 sm:grid-cols-3">
-        {[
-          { label: "覆盖城市", value: "待统计" },
-          { label: "填写用户", value: "待统计" },
-          { label: "Agent 用户占比", value: "待统计" },
-        ].map((item) => (
-          <div key={item.label} className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
-            <p className="text-sm text-slate-400">{item.label}</p>
-            <p className="mt-2 text-2xl font-semibold text-white">{item.value}</p>
-          </div>
-        ))}
-      </section>
+
+      <HomeStats />
     </main>
   );
 }
