@@ -1,11 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { levelLabel } from "@/lib/level";
+import { supabase } from "@/lib/supabase";
+import { computeLevel, levelLabel } from "@/lib/level";
 
 const APP_TOOLS = ["豆包", "DeepSeek", "Kimi", "ChatGPT", "Gemini", "通义", "元宝"];
 const AGENT_TOOLS = ["OpenClaw", "Hermes", "Codex", "Claude Code", "OpenCode", "Cursor", "Dify", "n8n Agent"];
-
 const PROVINCES = ["北京", "上海", "广东", "浙江", "江苏", "四川", "湖北", "山东", "福建", "河南", "其他"];
 
 export default function SurveyPage() {
@@ -18,7 +18,6 @@ export default function SurveyPage() {
   const [resultLevel, setResultLevel] = useState<number | null>(null);
 
   const toolOptions = userType === "app" ? APP_TOOLS : AGENT_TOOLS;
-
   const canSubmit = useMemo(() => province.trim().length > 0 && selectedTools.length > 0 && status !== "loading", [province, selectedTools, status]);
 
   function toggleTool(tool: string) {
@@ -33,32 +32,30 @@ export default function SurveyPage() {
     setMessage("");
     setResultLevel(null);
 
-    try {
-      const response = await fetch("/api/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          province,
-          city: city.trim() || undefined,
-          user_type: userType,
-          tools: selectedTools,
-        }),
-      });
+    const aiLevel = computeLevel(userType, selectedTools);
 
-      if (!response.ok) {
-        const body = await response.json().catch(() => null);
-        throw new Error(body?.error ?? "提交失败");
-      }
+    const { error, data } = await supabase
+      .from("users")
+      .insert({
+        province,
+        city: city.trim() || null,
+        user_type: userType,
+        tools: selectedTools,
+        ai_level: aiLevel,
+      })
+      .select("id, ai_level")
+      .single();
 
-      const body = (await response.json()) as { id?: string; ai_level?: number };
-      setStatus("success");
-      setMessage("提交成功！感谢参与 AI Agent 使用情况调查。");
-      setResultLevel(body.ai_level ?? null);
-      setSelectedTools([]);
-    } catch (error) {
+    if (error) {
       setStatus("error");
-      setMessage(error instanceof Error ? error.message : "提交失败");
+      setMessage(error.message);
+      return;
     }
+
+    setStatus("success");
+    setMessage("提交成功！感谢参与 AI Agent 使用情况调查。");
+    setResultLevel(data.ai_level ?? aiLevel);
+    setSelectedTools([]);
   }
 
   return (
