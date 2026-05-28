@@ -50,3 +50,85 @@ select option:hover, select option:checked, select option:focus {
 .map-breathe {
   animation: breathe 3s ease-in-out infinite;
 }
+
+/* Shimmer text effect */
+@keyframes shimmer {
+  0% { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+
+.shimmer-text {
+  background-image: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0) 100%);
+  background-size: 200% 100%;
+  background-position: 200% center;
+  animation: shimmer 3s linear infinite;
+}
+
+/* Rarity glow animations */
+@keyframes glow-rare {
+  0%, 100% { box-shadow: 0 0 15px rgba(59, 130, 246, 0.2), 0 0 30px rgba(59, 130, 246, 0.1); }
+  50% { box-shadow: 0 0 25px rgba(59, 130, 246, 0.35), 0 0 50px rgba(59, 130, 246, 0.15); }
+}
+
+@keyframes glow-epic {
+  0%, 100% { box-shadow: 0 0 15px rgba(168, 85, 247, 0.25), 0 0 30px rgba(168, 85, 247, 0.1); }
+  50% { box-shadow: 0 0 25px rgba(168, 85, 247, 0.4), 0 0 50px rgba(168, 85, 247, 0.2); }
+}
+
+@keyframes glow-legend {
+  0%, 100% { box-shadow: 0 0 20px rgba(251, 191, 36, 0.25), 0 0 40px rgba(251, 191, 36, 0.1); }
+  50% { box-shadow: 0 0 30px rgba(251, 191, 36, 0.4), 0 0 60px rgba(251, 191, 36, 0.2); }
+}
+
+@keyframes glow-mythic {
+  0%, 100% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.3), 0 0 40px rgba(239, 68, 68, 0.15); }
+  50% { box-shadow: 0 0 35px rgba(239, 68, 68, 0.5), 0 0 70px rgba(239, 68, 68, 0.25); }
+}
+
+.glow-rare { animation: glow-rare 2.5s ease-in-out infinite; }
+.glow-epic { animation: glow-epic 2.5s ease-in-out infinite; }
+.glow-legend { animation: glow-legend 2.5s ease-in-out infinite; }
+.glow-mythic { animation: glow-mythic 2.5s ease-in-out infinite; }
+
+/* Sci-fi scan line */
+@keyframes scan-line {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+.scan-line::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(transparent, rgba(34, 211, 238, 0.03), transparent);
+  animation: scan-line 4s linear infinite;
+  pointer-events: none;
+}
+
+/* Level up flash */
+@keyframes level-up-flash {
+  0% { opacity: 0; transform: scale(0.8); }
+  20% { opacity: 1; transform: scale(1.05); }
+  80% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.1); }
+}
+
+.level-up-flash {
+  animation: level-up-flash 2s ease-out forwards;
+}
+
+/* Reduce motion */
+@media (prefers-reduced-motion: reduce) {
+  .neon-border,
+  .map-breathe,
+  .shimmer-text,
+  .glow-rare,
+  .glow-epic,
+  .glow-legend,
+  .glow-mythic {
+    animation: none;
+  }
+  .scan-line::after {
+    animation: none;
+  }
+}
