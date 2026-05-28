@@ -2,23 +2,24 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { levelName, computeLevel } from "@/lib/level";
+import { generateAvatarSvg } from "@/lib/avatar";
 import { FadeIn } from "@/components/motion-wrapper";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight, CheckCircle2, Send, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, Shield, Swords, MapPin, FileText, Sparkles, Zap } from "lucide-react";
 
 const APP_TOOLS = ["豆包", "DeepSeek", "Kimi", "ChatGPT", "Claude", "Gemini", "通义千问", "腾讯元宝"];
 const AGENT_TOOLS = ["Codex", "Claude Code", "OpenCode", "OpenClaw", "Hermes", "Cursor", "Dify", "n8n", "Trae", "CodeBuddy"];
-const PROVINCES = [
-  "北京", "天津", "上海", "重庆", "河北", "山西", "辽宁", "吉林", "黑龙江",
-  "江苏", "浙江", "安徽", "福建", "江西", "山东", "河南", "湖北", "湖南",
-  "广东", "海南", "四川", "贵州", "云南", "陕西", "甘肃", "青海", "台湾",
-  "内蒙古", "广西", "西藏", "宁夏", "新疆", "香港", "澳门", "其他",
-];
-const FREQUENCIES = ["偶尔使用", "每周使用", "每天使用", "工作主力", "已经形成自动化工作流"];
-const PURPOSES = ["日常聊天", "写代码", "写作", "数据分析", "自动化工作流", "学习研究", "创意设计", "其他"];
-const OCCUPATIONS = ["程序员", "产品经理", "设计师", "学生", "教师", "自媒体", "企业管理", "自由职业", "其他"];
+const PROVINCES = ["北京","天津","上海","重庆","河北","山西","辽宁","吉林","黑龙江","江苏","浙江","安徽","福建","江西","山东","河南","湖北","湖南","广东","海南","四川","贵州","云南","陕西","甘肃","青海","台湾","内蒙古","广西","西藏","宁夏","新疆","香港","澳门","其他"];
+const FREQUENCIES = ["偶尔使用","每周使用","每天使用","工作主力","已经形成自动化工作流"];
+const PURPOSES = ["日常聊天","写代码","写作","数据分析","自动化工作流","学习研究","创意设计","其他"];
+const OCCUPATIONS = ["程序员","产品经理","设计师","学生","教师","自媒体","企业管理","自由职业","其他"];
 
-const TOTAL_STEPS = 4;
+const STEPS = [
+  { icon: Swords, label: "选择装备", desc: "选择你的 AI 工具" },
+  { icon: FileText, label: "使用场景", desc: "你的使用习惯" },
+  { icon: MapPin, label: "地区据点", desc: "你的所在地区" },
+  { icon: Shield, label: "生成档案", desc: "确认并生成身份卡" },
+];
 
 export default function SurveyPage() {
   const [step, setStep] = useState(1);
@@ -34,24 +35,33 @@ export default function SurveyPage() {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
   const [result, setResult] = useState<{ ai_level: number; ai_level_name: string; card_slug: string; avatar_seed: string } | null>(null);
+  const [levelUp, setLevelUp] = useState<number | null>(null);
+  const prevLevelRef = useRef(1);
 
-  // Anti-spam
   const honeypotRef = useRef("");
   const submitTimeRef = useRef(Date.now());
-
-  useEffect(() => {
-    submitTimeRef.current = Date.now();
-  }, []);
+  useEffect(() => { submitTimeRef.current = Date.now(); }, []);
 
   const toolOptions = userType === "app" ? APP_TOOLS : AGENT_TOOLS;
   const previewLevel = useMemo(() => computeLevel(userType, selectedTools), [userType, selectedTools]);
+  const previewAvatar = useMemo(() => generateAvatarSvg(nickname + previewLevel + selectedTools.join(""), previewLevel > 3 ? 24 : 16), [nickname, previewLevel, selectedTools]);
+  const rarity = ["", "普通", "稀有", "史诗", "传说", "神话"][previewLevel];
+
+  // Level up animation
+  useEffect(() => {
+    if (previewLevel > prevLevelRef.current) {
+      setLevelUp(previewLevel);
+      setTimeout(() => setLevelUp(null), 2000);
+    }
+    prevLevelRef.current = previewLevel;
+  }, [previewLevel]);
 
   const canNext = useMemo(() => {
-    if (step === 1) return province.trim().length > 0;
-    if (step === 2) return selectedTools.length > 0;
-    if (step === 3) return frequency.length > 0;
+    if (step === 1) return selectedTools.length > 0;
+    if (step === 2) return frequency.length > 0;
+    if (step === 3) return province.trim().length > 0;
     return true;
-  }, [step, province, selectedTools, frequency]);
+  }, [step, selectedTools, frequency, province]);
 
   function toggleTool(tool: string) {
     setSelectedTools((prev) => {
@@ -69,23 +79,16 @@ export default function SurveyPage() {
     setStatus("loading");
     setMessage("");
     const duration = Date.now() - submitTimeRef.current;
-
     try {
       const res = await fetch("/api/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          nickname: nickname.trim() || undefined,
-          province,
-          city: city.trim() || undefined,
-          occupation: occupation || undefined,
-          user_type: userType,
-          tools: selectedTools,
-          primary_tool: primaryTool || selectedTools[0],
-          usage_frequency: frequency,
+          nickname: nickname.trim() || undefined, province, city: city.trim() || undefined,
+          occupation: occupation || undefined, user_type: userType, tools: selectedTools,
+          primary_tool: primaryTool || selectedTools[0], usage_frequency: frequency,
           usage_purpose: purpose.length > 0 ? purpose : undefined,
-          honeypot: honeypotRef.current || undefined,
-          submit_duration_ms: duration,
+          honeypot: honeypotRef.current || undefined, submit_duration_ms: duration,
         }),
       });
       const body = await res.json().catch(() => ({}));
@@ -101,26 +104,25 @@ export default function SurveyPage() {
   if (status === "success" && result) {
     return (
       <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center gap-6 px-6 py-12 text-center">
-        <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}>
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/10"><CheckCircle2 className="h-10 w-10 text-emerald-400" /></div>
-        </motion.div>
-        <FadeIn delay={0.2}>
-          <h1 className="text-3xl font-bold text-white">提交成功！</h1>
-          <p className="mt-2 text-slate-400">你是第 <span className="font-bold text-indigo-300">{result.ai_level}</span> 级 AI 用户</p>
-        </FadeIn>
-        <FadeIn delay={0.3}>
-          <div className="rounded-2xl border border-indigo-500/30 bg-indigo-500/10 px-8 py-6 backdrop-blur-sm">
-            <p className="text-sm text-indigo-300">你的 AI 等级</p>
-            <p className="mt-2 text-3xl font-bold text-white">{result.ai_level_name}</p>
+        <motion.div initial={{ scale: 0, rotate: -180 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: "spring", duration: 0.8 }}>
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500/20 to-indigo-500/20 border border-cyan-500/30">
+            <CheckCircle2 className="h-12 w-12 text-cyan-400" />
           </div>
+        </motion.div>
+        <FadeIn delay={0.3}>
+          <h1 className="text-3xl font-bold text-white">身份档案生成完成！</h1>
+          <p className="mt-2 text-slate-400">你的 AI 身份已录入全国 Agent 地图</p>
         </FadeIn>
         <FadeIn delay={0.4}>
-          <div className="flex gap-3">
-            <a href={`/share?slug=${result.card_slug}`} className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-blue-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25">
-              <Send className="h-4 w-4" /> 查看我的卡片
-            </a>
-            <a href="/ranking" className="rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-sm font-semibold text-slate-200 backdrop-blur-sm">查看排行榜</a>
+          <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 px-8 py-6">
+            <p className="text-xs uppercase tracking-widest text-cyan-400">AI Level</p>
+            <p className="mt-2 text-3xl font-black text-white">{result.ai_level_name}</p>
           </div>
+        </FadeIn>
+        <FadeIn delay={0.5}>
+          <a href={`/share?slug=${result.card_slug}`} className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-500 px-8 py-4 text-sm font-bold text-white shadow-lg shadow-cyan-500/25">
+            <Shield className="h-4 w-4" /> 查看我的 AI 身份卡
+          </a>
         </FadeIn>
       </main>
     );
@@ -129,95 +131,82 @@ export default function SurveyPage() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
       <FadeIn>
-        <h1 className="text-3xl font-bold text-white sm:text-4xl">AI 使用情况调查</h1>
-        <p className="mt-3 text-slate-400">选择你使用的工具，系统会根据结果计算你的 AI 使用等级。</p>
+        <h1 className="text-3xl font-bold text-white sm:text-4xl">AI 身份扫描</h1>
+        <p className="mt-2 text-slate-400">完成以下步骤，生成你的 AI Agent 身份档案。</p>
       </FadeIn>
 
-      {/* Progress bar */}
+      {/* Steps indicator */}
       <FadeIn delay={0.1}>
-        <div className="mt-8 flex items-center gap-2">
-          {Array.from({ length: TOTAL_STEPS }, (_, i) => (
-            <div key={i} className="flex-1">
-              <div className={`h-1.5 rounded-full transition-all ${i + 1 <= step ? "bg-gradient-to-r from-indigo-500 to-blue-500" : "bg-white/10"}`} />
-              <p className={`mt-1 text-xs ${i + 1 <= step ? "text-indigo-300" : "text-slate-600"}`}>
-                {["基础信息", "工具选择", "使用强度", "确认提交"][i]}
-              </p>
-            </div>
-          ))}
+        <div className="mt-8 flex items-center gap-1">
+          {STEPS.map((s, i) => {
+            const Icon = s.icon;
+            const active = i + 1 <= step;
+            const current = i + 1 === step;
+            return (
+              <div key={i} className="flex-1">
+                <div className={`flex items-center gap-2 rounded-lg px-3 py-2 transition-all ${current ? "bg-cyan-500/10 border border-cyan-500/30" : active ? "bg-white/[0.03]" : ""}`}>
+                  <Icon className={`h-4 w-4 ${active ? "text-cyan-400" : "text-slate-600"}`} />
+                  <span className={`text-xs font-medium ${active ? "text-white" : "text-slate-600"}`}>{s.label}</span>
+                </div>
+                <div className={`mt-1 h-1 rounded-full transition-all ${i + 1 <= step ? "bg-gradient-to-r from-cyan-500 to-indigo-500" : "bg-white/5"}`} />
+              </div>
+            );
+          })}
         </div>
       </FadeIn>
 
-      {/* Honeypot - hidden field */}
-      <input type="text" name="website" value={honeypotRef.current} onChange={(e) => { honeypotRef.current = e.target.value; }} style={{ position: "absolute", left: "-9999px", opacity: 0 }} tabIndex={-1} autoComplete="off" />
-
-      <AnimatePresence mode="wait">
-        {/* Step 1: Basic Info */}
-        {step === 1 && (
-          <motion.div key="step1" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="mt-8 space-y-6">
-            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6 backdrop-blur-xl">
-              <h2 className="text-sm font-semibold text-white">基础信息</h2>
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <label className="block text-sm text-slate-400">
-                  昵称（可选）
-                  <input value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="你的昵称" className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 p-3 text-white placeholder:text-slate-600 focus:border-indigo-500/50 focus:outline-none" />
-                </label>
-                <label className="block text-sm text-slate-400">
-                  职业
-                  <select value={occupation} onChange={(e) => setOccupation(e.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 p-3 text-white focus:border-indigo-500/50 focus:outline-none">
-                    <option value="">请选择</option>
-                    {OCCUPATIONS.map((o) => (<option key={o} value={o}>{o}</option>))}
-                  </select>
-                </label>
-                <label className="block text-sm text-slate-400">
-                  省份/直辖市
-                  <select value={province} onChange={(e) => setProvince(e.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 p-3 text-white focus:border-indigo-500/50 focus:outline-none">
-                    {PROVINCES.map((p) => (<option key={p} value={p}>{p}</option>))}
-                  </select>
-                </label>
-                <label className="block text-sm text-slate-400">
-                  城市（可选）
-                  <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="例如：杭州" className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 p-3 text-white placeholder:text-slate-600 focus:border-indigo-500/50 focus:outline-none" />
-                </label>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6 backdrop-blur-xl">
-              <h2 className="text-sm font-semibold text-white">你是哪类用户？</h2>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                {([
-                  { key: "app" as const, title: "AI App 用户", desc: "豆包 / DeepSeek / Kimi / ChatGPT 等" },
-                  { key: "agent" as const, title: "AI Agent 用户", desc: "Codex / Claude Code / Dify / n8n 等" },
-                ]).map((opt) => (
-                  <motion.button key={opt.key} type="button" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                    onClick={() => { setUserType(opt.key); setSelectedTools([]); setPrimaryTool(""); }}
-                    className={`rounded-xl border px-4 py-4 text-left transition-all ${userType === opt.key ? "border-indigo-500/50 bg-indigo-500/10 text-white" : "border-white/10 bg-white/5 text-slate-400 hover:border-white/20"}`}>
-                    <span className="block text-sm font-semibold">{opt.title}</span>
-                    <span className="mt-1 block text-xs opacity-70">{opt.desc}</span>
-                  </motion.button>
-                ))}
-              </div>
-            </div>
+      {/* Level up animation */}
+      <AnimatePresence>
+        {levelUp && (
+          <motion.div initial={{ opacity: 0, y: -20, scale: 0.8 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -20 }}
+            className="fixed left-1/2 top-24 z-50 -translate-x-1/2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-6 py-3 backdrop-blur-xl shadow-lg shadow-amber-500/20">
+            <p className="text-center text-sm font-bold text-amber-300">⬆ LEVEL UP：{levelName(levelUp)}</p>
           </motion.div>
         )}
+      </AnimatePresence>
 
-        {/* Step 2: Tool Selection */}
-        {step === 2 && (
-          <motion.div key="step2" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="mt-8">
-            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6 backdrop-blur-xl">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-white">选择工具（可多选）</h2>
-                <div className="flex items-center gap-2 rounded-full bg-indigo-500/10 px-3 py-1 text-xs text-indigo-300">
-                  <Zap className="h-3 w-3" /> {levelName(previewLevel)}
-                </div>
+      {/* Honeypot */}
+      <input type="text" name="website" value={honeypotRef.current} onChange={(e) => { honeypotRef.current = e.target.value; }} style={{ position: "absolute", left: "-9999px" }} tabIndex={-1} autoComplete="off" />
+
+      <AnimatePresence mode="wait">
+        {/* Step 1: Equipment */}
+        {step === 1 && (
+          <motion.div key="s1" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="mt-6 space-y-5">
+            {/* Avatar preview */}
+            <div className="flex items-center gap-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
+              <div className="h-16 w-16 overflow-hidden rounded-xl border border-indigo-500/30" dangerouslySetInnerHTML={{ __html: previewAvatar }} />
+              <div>
+                <p className="text-sm font-bold text-white">{nickname || "未命名 Agent"}</p>
+                <p className={`text-xs font-medium ${["","text-slate-400","text-blue-400","text-purple-400","text-amber-400","text-red-400"][previewLevel]}`}>★ {rarity} · {levelName(previewLevel)}</p>
               </div>
-              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+            </div>
+
+            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="flex items-center gap-2 text-sm font-bold text-white"><Swords className="h-4 w-4 text-cyan-400" />选择你的 AI 装备</h2>
+                <div className="flex items-center gap-1 text-xs text-cyan-300"><Sparkles className="h-3 w-3" />{levelName(previewLevel)}</div>
+              </div>
+
+              <div className="mb-4 flex gap-2">
+                {(["app", "agent"] as const).map((t) => (
+                  <button key={t} onClick={() => { setUserType(t); setSelectedTools([]); }}
+                    className={`rounded-lg px-4 py-2 text-xs font-medium transition-all ${userType === t ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30" : "bg-white/5 text-slate-400 border border-white/10"}`}>
+                    {t === "app" ? "AI App" : "AI Agent"}
+                  </button>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
                 {toolOptions.map((tool) => {
                   const active = selectedTools.includes(tool);
                   return (
                     <motion.button key={tool} type="button" whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
                       onClick={() => toggleTool(tool)}
-                      className={`rounded-xl border px-4 py-3 text-left text-sm transition-all ${active ? "border-indigo-500/50 bg-indigo-500/10 text-white shadow-lg shadow-indigo-500/10" : "border-white/10 bg-white/5 text-slate-400 hover:border-white/20"}`}>
-                      {tool}
+                      className={`relative rounded-xl border p-3 text-left text-sm transition-all ${active ? "border-cyan-500/50 bg-cyan-500/10 text-white shadow-lg shadow-cyan-500/10" : "border-white/10 bg-white/[0.02] text-slate-400 hover:border-white/20 hover:bg-white/[0.04]"}`}>
+                      <span className="font-medium">{tool}</span>
+                      {active && (
+                        <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute right-2 top-2 rounded-full bg-cyan-500/20 px-1.5 py-0.5 text-[10px] font-bold text-cyan-300">已装备</motion.span>
+                      )}
                     </motion.button>
                   );
                 })}
@@ -225,8 +214,8 @@ export default function SurveyPage() {
 
               {selectedTools.length > 0 && (
                 <div className="mt-4">
-                  <label className="block text-sm text-slate-400">主力工具</label>
-                  <select value={primaryTool} onChange={(e) => setPrimaryTool(e.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 p-3 text-white focus:border-indigo-500/50 focus:outline-none">
+                  <label className="block text-xs text-slate-500">主力装备</label>
+                  <select value={primaryTool} onChange={(e) => setPrimaryTool(e.target.value)} className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 p-2 text-sm text-white focus:border-cyan-500/50 focus:outline-none">
                     {selectedTools.map((t) => (<option key={t} value={t}>{t}</option>))}
                   </select>
                 </div>
@@ -235,29 +224,26 @@ export default function SurveyPage() {
           </motion.div>
         )}
 
-        {/* Step 3: Usage */}
-        {step === 3 && (
-          <motion.div key="step3" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="mt-8 space-y-6">
-            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6 backdrop-blur-xl">
-              <h2 className="text-sm font-semibold text-white">使用强度</h2>
-              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {/* Step 2: Usage */}
+        {step === 2 && (
+          <motion.div key="s2" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="mt-6 space-y-5">
+            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5">
+              <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-white"><Zap className="h-4 w-4 text-cyan-400" />使用强度</h2>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {FREQUENCIES.map((f) => (
-                  <motion.button key={f} type="button" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                    onClick={() => setFrequency(f)}
-                    className={`rounded-xl border px-4 py-3 text-left text-sm transition-all ${frequency === f ? "border-indigo-500/50 bg-indigo-500/10 text-white" : "border-white/10 bg-white/5 text-slate-400 hover:border-white/20"}`}>
+                  <motion.button key={f} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => setFrequency(f)}
+                    className={`rounded-xl border p-3 text-left text-sm transition-all ${frequency === f ? "border-cyan-500/50 bg-cyan-500/10 text-white" : "border-white/10 bg-white/[0.02] text-slate-400 hover:border-white/20"}`}>
                     {f}
                   </motion.button>
                 ))}
               </div>
             </div>
-
-            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6 backdrop-blur-xl">
-              <h2 className="text-sm font-semibold text-white">使用 AI 的主要目的（可多选）</h2>
-              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5">
+              <h2 className="mb-4 text-sm font-bold text-white">使用场景（可多选）</h2>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {PURPOSES.map((p) => (
-                  <motion.button key={p} type="button" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                    onClick={() => togglePurpose(p)}
-                    className={`rounded-xl border px-3 py-2 text-left text-sm transition-all ${purpose.includes(p) ? "border-indigo-500/50 bg-indigo-500/10 text-white" : "border-white/10 bg-white/5 text-slate-400 hover:border-white/20"}`}>
+                  <motion.button key={p} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => togglePurpose(p)}
+                    className={`rounded-xl border p-3 text-left text-sm transition-all ${purpose.includes(p) ? "border-cyan-500/50 bg-cyan-500/10 text-white" : "border-white/10 bg-white/[0.02] text-slate-400 hover:border-white/20"}`}>
                     {p}
                   </motion.button>
                 ))}
@@ -266,52 +252,85 @@ export default function SurveyPage() {
           </motion.div>
         )}
 
-        {/* Step 4: Confirm */}
-        {step === 4 && (
-          <motion.div key="step4" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="mt-8">
-            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6 backdrop-blur-xl">
-              <h2 className="text-sm font-semibold text-white">确认信息</h2>
-              <div className="mt-4 space-y-3 text-sm">
-                <div className="flex justify-between"><span className="text-slate-400">地区</span><span className="text-white">{province}{city ? ` · ${city}` : ""}</span></div>
-                <div className="flex justify-between"><span className="text-slate-400">用户类型</span><span className="text-white">{userType === "agent" ? "AI Agent 用户" : "AI App 用户"}</span></div>
-                <div className="flex justify-between"><span className="text-slate-400">工具</span><span className="text-white">{selectedTools.join(", ")}</span></div>
-                <div className="flex justify-between"><span className="text-slate-400">主力工具</span><span className="text-white">{primaryTool || selectedTools[0]}</span></div>
-                <div className="flex justify-between"><span className="text-slate-400">使用强度</span><span className="text-white">{frequency}</span></div>
-                {purpose.length > 0 && <div className="flex justify-between"><span className="text-slate-400">使用目的</span><span className="text-white">{purpose.join(", ")}</span></div>}
-                <div className="flex justify-between border-t border-white/10 pt-3"><span className="text-slate-400">AI 等级</span><span className="font-bold text-indigo-300">{levelName(previewLevel)}</span></div>
+        {/* Step 3: Region */}
+        {step === 3 && (
+          <motion.div key="s3" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="mt-6">
+            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5">
+              <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-white"><MapPin className="h-4 w-4 text-cyan-400" />选择你的地区据点</h2>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block text-sm text-slate-400">
+                  昵称（可选）
+                  <input value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="你的代号" className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 p-3 text-white placeholder:text-slate-600 focus:border-cyan-500/50 focus:outline-none" />
+                </label>
+                <label className="block text-sm text-slate-400">
+                  职业
+                  <select value={occupation} onChange={(e) => setOccupation(e.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 p-3 text-white focus:border-cyan-500/50 focus:outline-none">
+                    <option value="">请选择</option>
+                    {OCCUPATIONS.map((o) => (<option key={o} value={o}>{o}</option>))}
+                  </select>
+                </label>
+                <label className="block text-sm text-slate-400">
+                  省份
+                  <select value={province} onChange={(e) => setProvince(e.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 p-3 text-white focus:border-cyan-500/50 focus:outline-none">
+                    {PROVINCES.map((p) => (<option key={p} value={p}>{p}</option>))}
+                  </select>
+                </label>
+                <label className="block text-sm text-slate-400">
+                  城市（可选）
+                  <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="例如：杭州" className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 p-3 text-white placeholder:text-slate-600 focus:border-cyan-500/50 focus:outline-none" />
+                </label>
               </div>
             </div>
-            {message && status === "error" ? <p className="mt-4 text-center text-sm text-red-400">{message}</p> : null}
+          </motion.div>
+        )}
+
+        {/* Step 4: Confirm */}
+        {step === 4 && (
+          <motion.div key="s4" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="mt-6">
+            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5">
+              <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-white"><Shield className="h-4 w-4 text-cyan-400" />身份档案确认</h2>
+              <div className="flex gap-4 mb-4">
+                <div className="h-20 w-20 overflow-hidden rounded-xl border border-indigo-500/30" dangerouslySetInnerHTML={{ __html: previewAvatar }} />
+                <div>
+                  <p className="text-lg font-bold text-white">{nickname || "未命名 Agent"}</p>
+                  <p className={`text-sm font-medium ${["","text-slate-400","text-blue-400","text-purple-400","text-amber-400","text-red-400"][previewLevel]}`}>★ {rarity} · {levelName(previewLevel)}</p>
+                </div>
+              </div>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between"><span className="text-slate-500">地区据点</span><span className="text-white">{province}{city ? ` · ${city}` : ""}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">装备</span><span className="text-white">{selectedTools.join(", ")}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">主力装备</span><span className="text-cyan-300 font-medium">{primaryTool || selectedTools[0]}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">使用强度</span><span className="text-white">{frequency}</span></div>
+                {purpose.length > 0 && <div className="flex justify-between"><span className="text-slate-500">使用场景</span><span className="text-white">{purpose.join(", ")}</span></div>}
+              </div>
+              {message && status === "error" ? <p className="mt-3 text-center text-sm text-red-400">{message}</p> : null}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Navigation */}
       <FadeIn delay={0.2}>
-        <div className="mt-8 flex gap-3">
+        <div className="mt-6 flex gap-3">
           {step > 1 && (
-            <motion.button type="button" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-              onClick={() => setStep((s) => s - 1)}
-              className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-sm font-semibold text-slate-200 backdrop-blur-sm">
+            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => setStep((s) => s - 1)}
+              className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-sm font-semibold text-slate-200">
               <ArrowLeft className="h-4 w-4" /> 上一步
             </motion.button>
           )}
-          {step < TOTAL_STEPS ? (
-            <motion.button type="button" whileHover={canNext ? { scale: 1.02 } : {}} whileTap={canNext ? { scale: 0.98 } : {}}
-              disabled={!canNext}
+          {step < 4 ? (
+            <motion.button whileHover={canNext ? { scale: 1.02 } : {}} whileTap={canNext ? { scale: 0.98 } : {}} disabled={!canNext}
               onClick={() => setStep((s) => s + 1)}
-              className="ml-auto flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-blue-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 disabled:cursor-not-allowed disabled:opacity-50">
+              className="ml-auto flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-cyan-500/25 disabled:opacity-50">
               下一步 <ArrowRight className="h-4 w-4" />
             </motion.button>
           ) : (
-            <motion.button type="button" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-              disabled={status === "loading"}
-              onClick={handleSubmit}
-              className="ml-auto flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-blue-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 disabled:cursor-not-allowed disabled:opacity-50">
+            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} disabled={status === "loading"} onClick={handleSubmit}
+              className="ml-auto flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-500 px-8 py-3 text-sm font-bold text-white shadow-lg shadow-cyan-500/25 disabled:opacity-50">
               {status === "loading" ? (
-                <><div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> 提交中...</>
+                <><div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> 生成中...</>
               ) : (
-                <><Send className="h-4 w-4" /> 提交</>
+                <><Sparkles className="h-4 w-4" /> 生成我的 AI 身份卡</>
               )}
             </motion.button>
           )}

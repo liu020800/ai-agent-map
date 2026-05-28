@@ -11,39 +11,42 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Fix select dropdown dark theme */
+/* Select dark theme fix */
 select {
   color-scheme: dark;
 }
-
 select option {
   background-color: #0f172a;
   color: #e2e8f0;
   padding: 8px 12px;
 }
-
-select option:hover,
-select option:checked,
-select option:focus {
+select option:hover, select option:checked, select option:focus {
   background-color: #1e293b;
   color: #ffffff;
 }
 
-/* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.03); }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+
+/* Neon glow for selected items */
+@keyframes neon-pulse {
+  0%, 100% { box-shadow: 0 0 5px rgba(34, 211, 238, 0.3), 0 0 10px rgba(34, 211, 238, 0.1); }
+  50% { box-shadow: 0 0 10px rgba(34, 211, 238, 0.5), 0 0 20px rgba(34, 211, 238, 0.2); }
 }
 
-::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.03);
+.neon-border {
+  animation: neon-pulse 2s ease-in-out infinite;
 }
 
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
+/* Breathing animation for map */
+@keyframes breathe {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+.map-breathe {
+  animation: breathe 3s ease-in-out infinite;
 }
