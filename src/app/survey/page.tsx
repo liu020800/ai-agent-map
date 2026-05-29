@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";import Link from "next/link";
@@ -24,8 +24,8 @@ const STEPS = [
 ];
 
 const R_NAMES = ["","普通","稀有","史诗","传说","神话"];
-const R_COLORS = ["","text-neutral-500","text-blue-400","text-purple-400","text-amber-400","text-red-400"];
-const R_BORDER = ["","border-neutral-500/20","border-blue-500/30","border-purple-500/30","border-amber-500/30","border-red-500/30"];
+const R_COLORS = ["","text-neutral-500","text-[#00ffc8]","text-purple-400","text-amber-400","text-red-400"];
+const R_BORDER = ["","border-neutral-500/20","border-[#00ffc8]/30","border-purple-500/30","border-amber-500/30","border-red-500/30"];
 
 export default function SurveyPage() {
   const router = useRouter();
@@ -97,7 +97,7 @@ export default function SurveyPage() {
         </motion.div>
         <h1 className="text-3xl font-black text-white">身份档案已生成</h1>
         <p className="text-neutral-400">{result.ai_level_name}</p>
-        <Link href={`/share?slug=${result.card_slug}`} className="inline-flex items-center gap-2 rounded-full bg-white px-8 py-4 text-base font-bold text-black hover:bg-neutral-200 transition-colors">
+        <Link href={`/share?slug=${result.card_slug}`} className="inline-flex items-center gap-2 btn-lusion">
           <Shield className="h-4 w-4" /> 查看我的 AI Agent Passport
         </Link>
       </main>
@@ -161,7 +161,7 @@ export default function SurveyPage() {
           <AnimatePresence mode="wait">
             {step===1 && (
               <motion.div key="s1" initial={{opacity:0,x:30}} animate={{opacity:1,x:0}} exit={{opacity:0,x:-30}} transition={{duration:0.3}}>
-                <div className="mb-6 flex rounded-xl border border-neutral-800 bg-white/[0.02] p-1">
+                <div className="mb-6 flex rounded-xl border border-white/[0.08] bg-white/[0.02] p-1">
                   {(["agent","app"] as const).map(t => (
                     <button key={t} onClick={()=>{setUserType(t);setSelectedTools([]);setPrimaryTool("");}}
                       className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-all ${userType===t?"bg-white/10 text-white":"text-neutral-500 hover:text-neutral-300"}`}>
@@ -174,7 +174,7 @@ export default function SurveyPage() {
                     const sel = selectedTools.includes(tool);
                     return (
                       <motion.button key={tool} onClick={()=>toggleTool(tool)} whileHover={{scale:1.03}} whileTap={{scale:0.97}}
-                        className={`relative rounded-2xl border p-4 text-left transition-all ${sel?"border-white/20 bg-white/5":"border-neutral-800 bg-[#0a0a0a] hover:border-neutral-700"}`}>
+                        className={`relative rounded-2xl border p-4 text-left transition-all ${sel?"border-white/20 bg-white/5":"border-white/[0.08] bg-[#0a0a0a] hover:border-neutral-700"}`}>
                         {sel && <motion.div initial={{scale:0}} animate={{scale:1}} className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full bg-white"><Check className="h-3 w-3 text-black"/></motion.div>}
                         <p className="text-sm font-bold text-white">{tool}</p>
                         {sel && <p className="mt-1 text-[10px] font-semibold text-neutral-400">已装备</p>}
@@ -187,25 +187,25 @@ export default function SurveyPage() {
 
             {step===2 && (
               <motion.div key="s2" initial={{opacity:0,x:30}} animate={{opacity:1,x:0}} exit={{opacity:0,x:-30}} transition={{duration:0.3}}>
-                <SpotlightCard className="p-6" spotlightColor="rgba(99,102,241,0.06)">
+                <SpotlightCard className="p-6" spotlightColor="rgba(34,211,238,0.06)">
                   <h2 className="flex items-center gap-2 text-lg font-bold text-white mb-4"><Zap className="h-5 w-5 text-neutral-400"/> 使用频率</h2>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     {FREQUENCIES.map(f => (
                       <motion.button key={f} onClick={()=>setFrequency(f)} whileHover={{scale:1.02}} whileTap={{scale:0.98}}
-                        className={`rounded-xl border p-3.5 text-left text-sm transition-all ${frequency===f?"border-white/20 bg-white/5 text-white":"border-neutral-800 bg-[#0a0a0a] text-neutral-400 hover:border-neutral-700"}`}>
+                        className={`rounded-xl border p-3.5 text-left text-sm transition-all ${frequency===f?"border-white/20 bg-white/5 text-white":"border-white/[0.08] bg-[#0a0a0a] text-neutral-400 hover:border-neutral-700"}`}>
                         {f}{frequency===f && <Check className="inline ml-2 h-3.5 w-3.5 text-neutral-400"/>}
                       </motion.button>
                     ))}
                   </div>
                 </SpotlightCard>
-                <SpotlightCard className="mt-4 p-6" spotlightColor="rgba(99,102,241,0.06)">
+                <SpotlightCard className="mt-4 p-6" spotlightColor="rgba(34,211,238,0.06)">
                   <h2 className="flex items-center gap-2 text-lg font-bold text-white mb-4"><FileText className="h-5 w-5 text-neutral-400"/> 使用场景（可多选）</h2>
                   <div className="flex flex-wrap gap-2">
                     {PURPOSES.map(p => {
                       const sel = purpose.includes(p);
                       return (
                         <motion.button key={p} onClick={()=>setPurpose(prev=>sel?prev.filter(x=>x!==p):[...prev,p])} whileTap={{scale:0.95}}
-                          className={`rounded-full border px-4 py-2 text-sm transition-all ${sel?"border-white/20 bg-white/5 text-white":"border-neutral-800 bg-[#0a0a0a] text-neutral-400 hover:border-neutral-700"}`}>{p}</motion.button>
+                          className={`rounded-full border px-4 py-2 text-sm transition-all ${sel?"border-white/20 bg-white/5 text-white":"border-white/[0.08] bg-[#0a0a0a] text-neutral-400 hover:border-neutral-700"}`}>{p}</motion.button>
                       );
                     })}
                   </div>
@@ -215,14 +215,14 @@ export default function SurveyPage() {
 
             {step===3 && (
               <motion.div key="s3" initial={{opacity:0,x:30}} animate={{opacity:1,x:0}} exit={{opacity:0,x:-30}} transition={{duration:0.3}}>
-                <SpotlightCard className="p-6" spotlightColor="rgba(99,102,241,0.06)">
+                <SpotlightCard className="p-6" spotlightColor="rgba(34,211,238,0.06)">
                   <h2 className="flex items-center gap-2 text-lg font-bold text-white mb-4"><MapPin className="h-5 w-5 text-neutral-400"/> 你的据点</h2>
                   <div className="grid gap-4 sm:grid-cols-2">
                     {[
-                      {label:"昵称",el:<div className="relative"><User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-600"/><input value={nickname} onChange={e=>setNickname(e.target.value)} placeholder="你的代号" className="w-full rounded-xl border border-neutral-800 bg-[#0a0a0a] py-3 pl-10 pr-4 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-600 focus:outline-none"/></div>},
-                      {label:"职业",el:<div className="relative"><Briefcase className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-600"/><select value={occupation} onChange={e=>setOccupation(e.target.value)} className="w-full rounded-xl border border-neutral-800 bg-[#0a0a0a] py-3 pl-10 pr-4 text-sm text-white focus:border-neutral-600 focus:outline-none"><option value="">请选择</option>{OCCUPATIONS.map(o=><option key={o} value={o}>{o}</option>)}</select></div>},
-                      {label:"省份",el:<select value={province} onChange={e=>setProvince(e.target.value)} className="w-full rounded-xl border border-neutral-800 bg-[#0a0a0a] py-3 px-4 text-sm text-white focus:border-neutral-600 focus:outline-none">{PROVINCES.map(p=><option key={p} value={p}>{p}</option>)}</select>},
-                      {label:"城市",el:<input value={city} onChange={e=>setCity(e.target.value)} placeholder="例如：杭州" className="w-full rounded-xl border border-neutral-800 bg-[#0a0a0a] py-3 px-4 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-600 focus:outline-none"/>},
+                      {label:"昵称",el:<div className="relative"><User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-600"/><input value={nickname} onChange={e=>setNickname(e.target.value)} placeholder="你的代号" className="w-full rounded-xl border border-white/[0.08] bg-[#0a0a0a] py-3 pl-10 pr-4 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-600 focus:outline-none"/></div>},
+                      {label:"职业",el:<div className="relative"><Briefcase className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-600"/><select value={occupation} onChange={e=>setOccupation(e.target.value)} className="w-full rounded-xl border border-white/[0.08] bg-[#0a0a0a] py-3 pl-10 pr-4 text-sm text-white focus:border-neutral-600 focus:outline-none"><option value="">请选择</option>{OCCUPATIONS.map(o=><option key={o} value={o}>{o}</option>)}</select></div>},
+                      {label:"省份",el:<select value={province} onChange={e=>setProvince(e.target.value)} className="w-full rounded-xl border border-white/[0.08] bg-[#0a0a0a] py-3 px-4 text-sm text-white focus:border-neutral-600 focus:outline-none">{PROVINCES.map(p=><option key={p} value={p}>{p}</option>)}</select>},
+                      {label:"城市",el:<input value={city} onChange={e=>setCity(e.target.value)} placeholder="例如：杭州" className="w-full rounded-xl border border-white/[0.08] bg-[#0a0a0a] py-3 px-4 text-sm text-white placeholder:text-neutral-600 focus:border-neutral-600 focus:outline-none"/>},
                     ].map(field => (
                       <div key={field.label}><label className="mb-2 block text-xs font-medium text-neutral-500">{field.label}</label>{field.el}</div>
                     ))}
@@ -233,7 +233,7 @@ export default function SurveyPage() {
 
             {step===4 && (
               <motion.div key="s4" initial={{opacity:0,x:30}} animate={{opacity:1,x:0}} exit={{opacity:0,x:-30}} transition={{duration:0.3}}>
-                <SpotlightCard className="p-6" spotlightColor="rgba(99,102,241,0.06)">
+                <SpotlightCard className="p-6" spotlightColor="rgba(34,211,238,0.06)">
                   <h2 className="flex items-center gap-2 text-lg font-bold text-white mb-5"><Shield className="h-5 w-5 text-neutral-400"/> 身份档案确认</h2>
                   <div className="flex gap-5 mb-6">
                     <div className={`h-24 w-24 overflow-hidden rounded-xl border-2 flex-shrink-0 ${R_BORDER[previewLevel]}`} dangerouslySetInnerHTML={{__html:previewAvatar}} />
@@ -243,7 +243,7 @@ export default function SurveyPage() {
                       {occupation && <p className="mt-1 text-xs text-neutral-500">{occupation}</p>}
                     </div>
                   </div>
-                  <div className="space-y-3 rounded-xl border border-neutral-800 bg-white/[0.02] p-4">
+                  <div className="space-y-3 rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
                     {[["地区据点",`${province}${city?` · ${city}`:""}`],["装备",selectedTools.join("、")],["主力装备",primaryTool||selectedTools[0]],["使用强度",frequency],...(purpose.length>0?[["使用场景",purpose.join("、")]]:[])].map(([k,v])=>(
                       <div key={k} className="flex justify-between text-sm"><span className="text-neutral-500">{k}</span><span className="font-medium text-white text-right max-w-[60%]">{v}</span></div>
                     ))}
@@ -256,15 +256,15 @@ export default function SurveyPage() {
 
           {/* Navigation */}
           <div className="mt-8 flex gap-3">
-            {step>1 && <motion.button whileHover={{scale:1.02}} whileTap={{scale:0.98}} onClick={()=>setStep(s=>s-1)} className="inline-flex items-center gap-2 rounded-full border border-neutral-700 px-6 py-3 text-sm font-semibold text-neutral-300 hover:bg-white/5 transition-colors"><ArrowLeft className="h-4 w-4"/> 上一步</motion.button>}
+            {step>1 && <motion.button whileHover={{scale:1.02}} whileTap={{scale:0.98}} onClick={()=>setStep(s=>s-1)} className="inline-flex items-center gap-2 rounded-full btn-lusion-outline !text-xs"><ArrowLeft className="h-4 w-4"/> 上一步</motion.button>}
             {step<4 ? (
               <motion.button whileHover={canNext?{scale:1.02}:{}} whileTap={canNext?{scale:0.98}:{}} disabled={!canNext} onClick={()=>setStep(s=>s+1)}
-                className="ml-auto inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-bold text-black hover:bg-neutral-200 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+                className="ml-auto inline-flex items-center gap-2 btn-lusion !text-xs disabled:opacity-30 disabled:cursor-not-allowed">
                 下一步 <ArrowRight className="h-4 w-4"/>
               </motion.button>
             ) : (
               <motion.button whileHover={{scale:1.02}} whileTap={{scale:0.98}} disabled={status==="loading"} onClick={handleSubmit}
-                className="ml-auto inline-flex items-center gap-2 rounded-full bg-white px-8 py-3 text-sm font-bold text-black hover:bg-neutral-200 transition-colors disabled:opacity-50">
+                className="ml-auto inline-flex items-center gap-2 btn-lusion !text-xs disabled:opacity-50">
                 {status==="loading"?<><div className="h-4 w-4 animate-spin rounded-full border-2 border-black/30 border-t-black"/> 生成中...</>:<><Sparkles className="h-4 w-4"/> 生成我的 AI Agent Passport</>}
               </motion.button>
             )}
@@ -274,7 +274,7 @@ export default function SurveyPage() {
         {/* Right: Preview */}
         <div className="hidden lg:block">
           <div className="sticky top-28">
-            <SpotlightCard className="p-4" spotlightColor="rgba(99,102,241,0.06)">
+            <SpotlightCard className="p-4" spotlightColor="rgba(34,211,238,0.06)">
               <p className="mb-3 text-[10px] font-semibold tracking-widest text-neutral-500 uppercase">Live Preview</p>
               <div className={`mx-auto h-24 w-24 overflow-hidden rounded-xl border-2 ${R_BORDER[previewLevel]}`} dangerouslySetInnerHTML={{__html:previewAvatar}} />
               <p className="mt-3 text-center text-sm font-bold text-white truncate">{nickname||"Agent"}</p>
@@ -285,8 +285,8 @@ export default function SurveyPage() {
                 <div className="flex justify-between text-[11px]"><span className="text-neutral-500">等级</span><span className="font-medium text-white">{levelName(previewLevel).split(" ")[0]}</span></div>
                 <div className="flex justify-between text-[11px]"><span className="text-neutral-500">装备</span><span className="font-medium text-white">{selectedTools.length}</span></div>
               </div>
-              <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-white/5">
-                <motion.div className="h-full rounded-full bg-white" animate={{width:`${(previewLevel/5)*100}%`}} transition={{duration:0.5}} />
+              <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-white/5">
+                <motion.div className="h-full rounded-full bg-gradient-to-r from-[#00ffc8] to-[#a855f7]" animate={{width:`${(previewLevel/5)*100}%`}} transition={{duration:0.5}} />
               </div>
             </SpotlightCard>
           </div>

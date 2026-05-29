@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -117,7 +117,7 @@ export default function SharePanel({ title, userNumber, levelName, primaryTool, 
     <>
       {/* Trigger button */}
       <motion.button onClick={handleNativeShare} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-        className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25">
+        className="btn-lusion !text-xs !px-5 !py-2.5">
         <Share2 className="h-4 w-4" /> 分享身份卡
       </motion.button>
 
@@ -128,10 +128,10 @@ export default function SharePanel({ title, userNumber, levelName, primaryTool, 
             className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm p-4 sm:items-center" onClick={() => setOpen(false)}>
             <motion.div initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-lg rounded-2xl border border-white/[0.1] bg-slate-900/95 p-6 backdrop-blur-xl">
+              className="w-full max-w-lg rounded-2xl border border-white/[0.1] bg-[#0a0a0f]/95 p-6 backdrop-blur-xl">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-white">分享到</h3>
-                <button onClick={() => setOpen(false)} className="rounded-full p-1 text-slate-400 hover:text-white"><X className="h-5 w-5" /></button>
+                <button onClick={() => setOpen(false)} className="rounded-full p-1 text-neutral-400 hover:text-white"><X className="h-5 w-5" /></button>
               </div>
 
               {/* WeChat hint */}
@@ -140,7 +140,7 @@ export default function SharePanel({ title, userNumber, levelName, primaryTool, 
                   <Smartphone className="h-4 w-4" />
                   <span className="font-medium">微信分享：</span>
                 </div>
-                <p className="mt-1 text-xs text-slate-400">点击下方「保存图片」后，打开微信粘贴发送给好友或发朋友圈</p>
+                <p className="mt-1 text-xs text-neutral-400">点击下方「保存图片」后，打开微信粘贴发送给好友或发朋友圈</p>
               </div>
 
               {/* Platform grid */}
@@ -149,16 +149,16 @@ export default function SharePanel({ title, userNumber, levelName, primaryTool, 
                   <motion.button key={p.name} onClick={p.action} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
                     className="flex flex-col items-center gap-1.5 rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 transition-all hover:border-white/[0.12] hover:bg-white/[0.06]">
                     <span className="text-2xl">{p.icon}</span>
-                    <span className="text-[10px] font-medium text-slate-300">{p.badge || p.name}</span>
-                    {p.hint && <span className="text-[9px] text-slate-500">{p.hint}</span>}
+                    <span className="text-[10px] font-medium text-neutral-300">{p.badge || p.name}</span>
+                    {p.hint && <span className="text-[9px] text-neutral-500">{p.hint}</span>}
                   </motion.button>
                 ))}
               </div>
 
               {/* Share text preview */}
               <div className="mt-4 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
-                <p className="text-[10px] text-slate-500">分享文案预览</p>
-                <p className="mt-1 text-xs text-slate-300 leading-relaxed">{shareText}</p>
+                <p className="text-[10px] text-neutral-500">分享文案预览</p>
+                <p className="mt-1 text-xs text-neutral-300 leading-relaxed">{shareText}</p>
               </div>
             </motion.div>
           </motion.div>

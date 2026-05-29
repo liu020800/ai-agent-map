@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
@@ -58,12 +58,12 @@ export default function MapPage() {
         <div className="flex items-center gap-1.5 text-xs text-neutral-500"><Filter className="h-3 w-3"/> 信号类型</div>
         {(["all","agent","app"] as const).map(f=>(
           <motion.button key={f} onClick={()=>setUserFilter(f)} whileHover={{scale:1.05}} whileTap={{scale:0.95}}
-            className={`rounded-lg px-4 py-2 text-xs font-semibold transition-all ${userFilter===f?"bg-white/10 text-white border border-white/20":"bg-white/[0.03] text-neutral-400 border border-neutral-800 hover:border-neutral-700"}`}>
+            className={`rounded-lg px-4 py-2 text-xs font-semibold transition-all ${userFilter===f?"bg-[#00ffc8]/10 text-[#00ffc8]/80 border border-[#00ffc8]/30 shadow-[0_0_10px_rgba(0,255,200,0.1)]":"bg-white/[0.03] text-neutral-400 border border-white/[0.08] hover:border-neutral-700"}`}>
             {f==="all"?"全部信号":f==="agent"?"Agent 信号":"App 信号"}
           </motion.button>
         ))}
         {topTools.length>0&&(
-          <select value={selectedTool} onChange={e=>setSelectedTool(e.target.value)} className="rounded-lg border border-neutral-800 bg-[#0a0a0a] px-3 py-2 text-xs text-neutral-400 focus:border-neutral-600 focus:outline-none">
+          <select value={selectedTool} onChange={e=>setSelectedTool(e.target.value)} className="rounded-lg border border-white/[0.08] bg-[#0a0a0a] px-3 py-2 text-xs text-neutral-400 focus:border-neutral-600 focus:outline-none">
             <option value="">所有装备</option>
             {topTools.map(t=><option key={t.name} value={t.name}>{t.name} ({t.count})</option>)}
           </select>
@@ -72,20 +72,20 @@ export default function MapPage() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
         <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{delay:0.2}}>
-          <SpotlightCard className="p-2" spotlightColor="rgba(99,102,241,0.06)">
-            <div className="overflow-hidden rounded-2xl border border-neutral-800">
+          <SpotlightCard className="p-2" spotlightColor="rgba(34,211,238,0.06)">
+            <div className="overflow-hidden rounded-2xl border border-white/[0.08]">
               <ChinaMapChart data={data?.provinces??[]} filter={userFilter}/>
             </div>
           </SpotlightCard>
         </motion.div>
 
         <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{delay:0.3}}>
-          <SpotlightCard className="p-4" spotlightColor="rgba(99,102,241,0.06)">
+          <SpotlightCard className="p-4" spotlightColor="rgba(34,211,238,0.06)">
             <div className="flex items-center gap-2 mb-4"><MapPin className="h-4 w-4 text-neutral-400"/><span className="text-sm font-bold text-white">据点排行</span></div>
             <div className="space-y-1 max-h-[500px] overflow-y-auto pr-1">
               {sortedProvinces.slice(0,20).map((p,i)=>(
                 <motion.div key={p.name} initial={{opacity:0,x:10}} animate={{opacity:1,x:0}} transition={{delay:0.1+i*0.03}}
-                  className={`flex items-center justify-between rounded-lg px-3 py-2.5 transition-all ${i<3?"bg-white/5 border border-neutral-800":"hover:bg-white/[0.03]"}`}>
+                  className={`flex items-center justify-between rounded-lg px-3 py-2.5 transition-all ${i<3?"bg-white/5 border border-white/[0.08]":"hover:bg-white/[0.03]"}`}>
                   <div className="flex items-center gap-2.5">
                     <span className={`flex h-5 w-5 items-center justify-center rounded text-[10px] font-bold ${i<3?"bg-white/10 text-white":"bg-white/5 text-neutral-500"}`}>{i+1}</span>
                     <span className="text-sm font-medium text-white">{p.name}</span>

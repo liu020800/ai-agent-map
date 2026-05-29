@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
@@ -63,7 +63,7 @@ export default function RankingPage() {
                 const Icon = RANK_ICONS[i]||null;
                 return (
                   <motion.div key={item.name} initial={{opacity:0,x:10}} animate={{opacity:1,x:0}} transition={{delay:0.1+i*0.05}} whileHover={{x:4}}
-                    className={`flex items-center justify-between rounded-lg px-3 py-2.5 transition-all ${i<3?"bg-white/5 border border-neutral-800":"hover:bg-white/[0.03]"}`}>
+                    className={`flex items-center justify-between rounded-lg px-3 py-2.5 transition-all ${i<3?"bg-white/5 border border-white/[0.08]":"hover:bg-white/[0.03]"}`}>
                     <span className="flex items-center gap-2.5">
                       {Icon?<Icon className="h-4 w-4 text-neutral-400"/>:<span className="flex h-4 w-4 items-center justify-center text-[10px] font-bold text-neutral-500">{i+1}</span>}
                       <span className="text-sm font-medium text-white">{item.name}</span>
@@ -79,7 +79,7 @@ export default function RankingPage() {
 
         {/* Provinces */}
         <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{delay:0.2}}>
-          <SpotlightCard className="p-5" spotlightColor="rgba(99,102,241,0.06)">
+          <SpotlightCard className="p-5" spotlightColor="rgba(34,211,238,0.06)">
             <div className="flex items-center gap-2 mb-5"><MapPin className="h-4 w-4 text-neutral-400"/><span className="text-sm font-bold text-white">据点排行</span></div>
             <div className="space-y-1">
               {(data?.provinces??[]).slice(0,10).map((item,i)=>(
@@ -104,7 +104,7 @@ export default function RankingPage() {
             <div className="space-y-3">
               {(data?.levels??[]).map((item,i)=>(
                 <motion.div key={item.level} initial={{opacity:0,x:10}} animate={{opacity:1,x:0}} transition={{delay:0.2+i*0.08}}
-                  className="rounded-lg border border-neutral-800 bg-white/[0.02] px-3 py-3">
+                  className="rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-3">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium text-white">{levelName(item.level)}</span>
                     <CountUp to={item.count} className="text-sm font-bold text-white tabular-nums" duration={1}/>

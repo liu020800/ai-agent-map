@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -19,7 +19,7 @@ export default function NotFound() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="text-lg text-slate-400"
+        className="text-lg text-neutral-400"
       >
         你要找的页面不存在或已移动。
       </motion.p>
@@ -30,7 +30,7 @@ export default function NotFound() {
       >
         <Link
           href="/"
-          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-blue-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25"
+          className="inline-flex items-center gap-2 btn-gradient inline-flex items-center gap-2 px-6 py-3 text-sm"
         >
           <Home className="h-4 w-4" /> 返回首页
         </Link>

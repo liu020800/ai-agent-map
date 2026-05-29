@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
@@ -11,6 +11,7 @@ import { Download, RefreshCw, Sparkles, Shield, Swords, MapPin, Star, Wifi } fro
 import SharePanel from "@/components/share-panel";
 import SciFiLoader from "@/components/react-bits/SciFiLoader";
 import SpotlightCard from "@/components/react-bits/SpotlightCard";
+import LiquidGlassCard from "@/components/react-bits/LiquidGlassCard";
 import CountUp from "@/components/react-bits/CountUp";
 import ShinyText from "@/components/react-bits/ShinyText";
 
@@ -20,7 +21,7 @@ type CardData = { nickname:string;ai_level:number;ai_level_name:string;primary_t
 
 const RARITY: Record<number,{name:string;color:string;border:string;label:string;accent:string}> = {
   1:{name:"普通",color:"text-neutral-500",border:"border-neutral-500/30",label:"R",accent:"#737373"},
-  2:{name:"稀有",color:"text-blue-400",border:"border-blue-500/40",label:"SR",accent:"#3b82f6"},
+  2:{name:"稀有",color:"text-[#00ffc8]",border:"border-[#00ffc8]/40",label:"SR",accent:"#00ffc8"},
   3:{name:"史诗",color:"text-purple-400",border:"border-purple-500/40",label:"SSR",accent:"#a855f7"},
   4:{name:"传说",color:"text-amber-400",border:"border-amber-500/40",label:"UR",accent:"#fbbf24"},
   5:{name:"神话",color:"text-red-400",border:"border-red-500/40",label:"LR",accent:"#ef4444"},
@@ -133,17 +134,17 @@ export default function ShareContent() {
               </div>
 
               <div className="grid grid-cols-2 gap-3 mb-5">
-                <div className="rounded-xl border border-neutral-800 bg-white/[0.02] p-3 text-center">
+                <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-3 text-center">
                   <p className="text-[10px] text-neutral-500 mb-1">战斗力</p>
                   <CountUp to={power} className="text-xl font-black text-white" duration={1.5}/>
                 </div>
-                <div className="rounded-xl border border-neutral-800 bg-white/[0.02] p-3 text-center">
+                <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-3 text-center">
                   <p className="text-[10px] text-neutral-500 mb-1">编号</p>
                   <p className="text-xl font-black text-white">#{userNumber?String(userNumber).padStart(6,"0"):"000000"}</p>
                 </div>
               </div>
 
-              <div className="rounded-xl border border-neutral-800 bg-white/[0.02] p-3 mb-4">
+              <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-3 mb-4">
                 <p className="mb-2 flex items-center gap-1.5 text-[10px] font-medium text-neutral-500"><Swords className="h-3 w-3"/> 已装备</p>
                 <div className="flex flex-wrap gap-1.5">
                   {(card?.tools||[tool]).slice(0,4).map(t=>(
@@ -157,9 +158,9 @@ export default function ShareContent() {
                 <span className="text-xs text-neutral-400">{card?.province||"未知"}</span>
               </div>
 
-              <div className="mt-auto border-t border-neutral-800 pt-3 flex items-center justify-between">
-                <div><p className="text-[9px] text-neutral-600">扫码生成你的 AI 身份</p><p className="text-[8px] text-neutral-700">liusq.icu</p></div>
-                <div className="h-10 w-10 rounded-lg bg-white/5 border border-neutral-800 flex items-center justify-center"><span className="text-[8px] text-neutral-600">QR</span></div>
+              <div className="mt-auto border-t border-white/[0.08] pt-3 flex items-center justify-between">
+                <div><p className="text-[9px] text-neutral-500">扫码生成你的 AI 身份</p><p className="text-[8px] text-neutral-700">liusq.icu</p></div>
+                <div className="h-10 w-10 rounded-lg bg-white/5 border border-white/[0.08] flex items-center justify-center"><span className="text-[8px] text-neutral-500">QR</span></div>
               </div>
             </div>
           </div>
@@ -169,11 +170,11 @@ export default function ShareContent() {
         <motion.div initial={{opacity:0,y:30}} animate={{opacity:1,y:0}} transition={{delay:0.2}}>
           <div className="space-y-4">
             {!card&&(
-              <SpotlightCard className="space-y-3 p-5" spotlightColor="rgba(99,102,241,0.06)">
-                <label className="block text-sm text-neutral-400">昵称<input value={name} onChange={e=>setName(e.target.value)} className="mt-2 w-full rounded-xl border border-neutral-800 bg-[#0a0a0a] p-3 text-sm text-white focus:border-neutral-600 focus:outline-none"/></label>
-                <label className="block text-sm text-neutral-400">AI 等级<select value={level} onChange={e=>setLevel(Number(e.target.value))} className="mt-2 w-full rounded-xl border border-neutral-800 bg-[#0a0a0a] p-3 text-sm text-white focus:border-neutral-600 focus:outline-none">{[1,2,3,4,5].map(lv=><option key={lv} value={lv}>{levelName(lv)}</option>)}</select></label>
-                <label className="block text-sm text-neutral-400">主力工具<input value={tool} onChange={e=>setTool(e.target.value)} className="mt-2 w-full rounded-xl border border-neutral-800 bg-[#0a0a0a] p-3 text-sm text-white focus:border-neutral-600 focus:outline-none"/></label>
-                <motion.button onClick={generateAiAvatar} disabled={avatarLoading} whileHover={{scale:1.02}} whileTap={{scale:0.98}} className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-4 py-3 text-sm font-bold text-black hover:bg-neutral-200 transition-colors disabled:opacity-50">
+              <SpotlightCard className="space-y-3 p-5" spotlightColor="rgba(34,211,238,0.06)">
+                <label className="block text-sm text-neutral-400">昵称<input value={name} onChange={e=>setName(e.target.value)} className="mt-2 w-full rounded-xl border border-white/[0.08] bg-[#0a0a0a] p-3 text-sm text-white focus:border-neutral-600 focus:outline-none"/></label>
+                <label className="block text-sm text-neutral-400">AI 等级<select value={level} onChange={e=>setLevel(Number(e.target.value))} className="mt-2 w-full rounded-xl border border-white/[0.08] bg-[#0a0a0a] p-3 text-sm text-white focus:border-neutral-600 focus:outline-none">{[1,2,3,4,5].map(lv=><option key={lv} value={lv}>{levelName(lv)}</option>)}</select></label>
+                <label className="block text-sm text-neutral-400">主力工具<input value={tool} onChange={e=>setTool(e.target.value)} className="mt-2 w-full rounded-xl border border-white/[0.08] bg-[#0a0a0a] p-3 text-sm text-white focus:border-neutral-600 focus:outline-none"/></label>
+                <motion.button onClick={generateAiAvatar} disabled={avatarLoading} whileHover={{scale:1.02}} whileTap={{scale:0.98}} className="inline-flex w-full items-center justify-center gap-2 btn-lusion !text-xs !px-4 !py-3 disabled:opacity-50">
                   <Sparkles className="h-4 w-4"/> {avatarLoading?"AI 生成中...":"生成 AI 头像"}
                 </motion.button>
               </SpotlightCard>
@@ -183,7 +184,7 @@ export default function ShareContent() {
 
             <div className="flex gap-3">
               <motion.button onClick={handleDownload} disabled={generating} whileHover={{scale:1.02}} whileTap={{scale:0.98}}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-white px-4 py-3 text-sm font-bold text-black hover:bg-neutral-200 transition-colors disabled:opacity-50">
+                className="inline-flex flex-1 items-center justify-center gap-2 btn-lusion !text-xs !px-4 !py-3 disabled:opacity-50">
                 <Download className="h-4 w-4"/> {generating?"生成中...":"保存身份卡"}
               </motion.button>
               <a href="/survey" className="inline-flex items-center gap-2 rounded-full border border-neutral-700 px-4 py-3 text-sm font-semibold text-neutral-300 hover:bg-white/5 transition-colors">
