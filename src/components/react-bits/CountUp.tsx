@@ -9,7 +9,7 @@ interface CountUpProps {
   suffix?: string;
 }
 
-export default function CountUp({ target, className = "", duration = 1.5, suffix = "" }: CountUpProps) {
+export default function CountUp({ target, className = "", duration = 1.8, suffix = "" }: CountUpProps) {
   const [count, setCount] = useState(0);
   const ref = useRef<HTMLSpanElement>(null);
   const startedRef = useRef(false);
@@ -24,9 +24,11 @@ export default function CountUp({ target, className = "", duration = 1.5, suffix
         const animate = (now: number) => {
           const elapsed = now - start;
           const progress = Math.min(elapsed / (duration * 1000), 1);
-          const eased = 1 - Math.pow(1 - progress, 3);
+          // Smooth easing
+          const eased = 1 - Math.pow(1 - progress, 4);
           setCount(Math.floor(eased * target));
           if (progress < 1) requestAnimationFrame(animate);
+          else setCount(target);
         };
         requestAnimationFrame(animate);
       }

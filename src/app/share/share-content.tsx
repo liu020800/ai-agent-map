@@ -6,35 +6,28 @@ import { useSearchParams } from "next/navigation";
 import { toPng } from "html-to-image";
 import { levelName } from "@/lib/level";
 import { generateAvatarSvg } from "@/lib/avatar";
-import { FadeIn } from "@/components/motion-wrapper";
 import { motion } from "framer-motion";
-import { Download, Copy, RefreshCw, Sparkles, Shield, Swords, MapPin, Zap, Star } from "lucide-react";
+import { Download, RefreshCw, Sparkles, Shield, Swords, MapPin, Star, Zap, Wifi } from "lucide-react";
 import SharePanel from "@/components/share-panel";
 import SciFiLoader from "@/components/react-bits/SciFiLoader";
-import ShinyText from "@/components/react-bits/ShinyText";
 import SpotlightCard from "@/components/react-bits/SpotlightCard";
 import CountUp from "@/components/react-bits/CountUp";
+import ShinyText from "@/components/react-bits/ShinyText";
 
 const ParticlesBG = dynamic(() => import("@/components/react-bits/ParticlesBG"), { ssr: false });
 
 type CardData = {
-  nickname: string;
-  ai_level: number;
-  ai_level_name: string;
-  primary_tool: string;
-  tools: string[];
-  avatar_seed: string;
-  province: string;
-  created_at: string;
-  user_number: number;
+  nickname: string; ai_level: number; ai_level_name: string;
+  primary_tool: string; tools: string[]; avatar_seed: string;
+  province: string; created_at: string; user_number: number;
 };
 
-const RARITY: Record<number, { name: string; color: string; glow: string; borderColor: string; bgGrad: string; label: string }> = {
-  1: { name: "普通", color: "text-slate-400", glow: "", borderColor: "rgba(148, 163, 184, 0.3)", bgGrad: "from-slate-800/50 to-slate-900/50", label: "R" },
-  2: { name: "稀有", color: "text-blue-400", glow: "shadow-[0_0_20px_rgba(59,130,246,0.3)]", borderColor: "rgba(59, 130, 246, 0.4)", bgGrad: "from-blue-950/30 to-slate-900/50", label: "SR" },
-  3: { name: "史诗", color: "text-purple-400", glow: "shadow-[0_0_25px_rgba(168,85,247,0.35)]", borderColor: "rgba(168, 85, 247, 0.4)", bgGrad: "from-purple-950/30 to-slate-900/50", label: "SSR" },
-  4: { name: "传说", color: "text-amber-400", glow: "shadow-[0_0_30px_rgba(251,191,36,0.3)]", borderColor: "rgba(251, 191, 36, 0.4)", bgGrad: "from-amber-950/30 to-slate-900/50", label: "UR" },
-  5: { name: "神话", color: "text-red-400", glow: "shadow-[0_0_35px_rgba(239,68,68,0.35)]", borderColor: "rgba(239, 68, 68, 0.4)", bgGrad: "from-red-950/30 to-slate-900/50", label: "LR" },
+const RARITY: Record<number, { name: string; color: string; border: string; glow: string; label: string; accent: string }> = {
+  1: { name: "普通", color: "text-slate-400", border: "border-slate-500/30", glow: "glow-r", label: "R", accent: "#94a3b8" },
+  2: { name: "稀有", color: "text-blue-400", border: "border-blue-500/40", glow: "glow-sr", label: "SR", accent: "#3b82f6" },
+  3: { name: "史诗", color: "text-purple-400", border: "border-purple-500/40", glow: "glow-ssr", label: "SSR", accent: "#a855f7" },
+  4: { name: "传说", color: "text-amber-400", border: "border-amber-500/40", glow: "glow-ur", label: "UR", accent: "#fbbf24" },
+  5: { name: "神话", color: "text-red-400", border: "border-red-500/40", glow: "glow-lr", label: "LR", accent: "#ef4444" },
 };
 
 const POWER: Record<number, number> = { 1: 100, 2: 500, 3: 2000, 4: 8000, 5: 50000 };
@@ -48,7 +41,6 @@ export default function ShareContent() {
   const [generating, setGenerating] = useState(false);
   const [aiAvatarUrl, setAiAvatarUrl] = useState<string | null>(null);
   const [avatarLoading, setAvatarLoading] = useState(false);
-
   const [name, setName] = useState("AI 用户");
   const [level, setLevel] = useState(4);
   const [tool, setTool] = useState("Codex + Claude Code");
@@ -57,8 +49,8 @@ export default function ShareContent() {
     if (!slug) return;
     setLoading(true);
     fetch(`/api/cards/${slug}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => { if (data) { setCard(data); setName(data.nickname); setLevel(data.ai_level); setTool(data.primary_tool || data.tools?.[0] || ""); } })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) { setCard(d); setName(d.nickname); setLevel(d.ai_level); setTool(d.primary_tool || d.tools?.[0] || ""); } })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [slug]);
@@ -67,12 +59,11 @@ export default function ShareContent() {
     setAvatarLoading(true);
     try {
       const res = await fetch("/api/generate-avatar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ seed: card?.avatar_seed || name + Date.now(), level: card?.ai_level || level, tools: card?.tools || [tool] }),
       });
-      const data = await res.json();
-      if (data.url) setAiAvatarUrl(data.url);
+      const d = await res.json();
+      if (d.url) setAiAvatarUrl(d.url);
     } catch {} finally { setAvatarLoading(false); }
   }, [card, name, level, tool]);
 
@@ -101,174 +92,163 @@ export default function ShareContent() {
 
   if (loading) {
     return (
-      <main className="relative mx-auto flex min-h-screen max-w-3xl items-center justify-center px-6">
-        <ParticlesBG className="fixed inset-0 -z-10 opacity-30" count={25} />
+      <main className="relative mx-auto flex min-h-[80vh] max-w-3xl items-center justify-center px-6">
+        <ParticlesBG className="-z-10 opacity-20" count={20} />
         <SciFiLoader text="正在扫描 AI 身份信号..." />
       </main>
     );
   }
 
   return (
-    <main className="relative mx-auto max-w-3xl px-6 py-12">
-      <ParticlesBG className="fixed inset-0 -z-10 opacity-20" count={20} />
+    <main className="relative mx-auto max-w-[1100px] px-6 py-8">
+      <ParticlesBG className="-z-10 opacity-15" count={20} />
 
-      <FadeIn>
-        <div className="text-center">
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="inline-flex items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-500/5 px-4 py-1.5">
-            <Shield className="h-3 w-3 text-indigo-400" />
-            <span className="text-xs font-medium uppercase tracking-[0.3em] text-indigo-400">AI Agent Passport</span>
-          </motion.div>
-          <h1 className="mt-3 text-3xl font-black text-white sm:text-4xl">{card ? "你的 AI 身份档案" : "生成 AI 身份卡"}</h1>
+      {/* Header */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-10 text-center">
+        <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/20 bg-indigo-500/5 px-4 py-1.5 mb-3">
+          <Wifi className="h-3 w-3 text-indigo-400" />
+          <span className="text-[10px] font-semibold tracking-[0.3em] text-indigo-400 uppercase">AI Agent Passport</span>
         </div>
-      </FadeIn>
+        <h1 className="text-3xl font-black text-white sm:text-4xl">{card ? "你的 AI 身份档案" : "生成 AI 身份卡"}</h1>
+      </motion.div>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-5">
+      <div className="grid gap-8 lg:grid-cols-[1fr_340px]">
         {/* Passport Card */}
-        <FadeIn delay={0.1} className="lg:col-span-3">
-          <motion.div ref={cardRef}
-            className={`relative overflow-hidden rounded-2xl border-2 ${rarity.glow}`}
-            style={{ borderColor: rarity.borderColor }}
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 200, damping: 20 }}>
+        <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <div ref={cardRef}
+            className={`relative mx-auto max-w-[380px] overflow-hidden rounded-2xl border-2 ${rarity.border} ${rarity.glow}`}
+            style={{ aspectRatio: "3/4" }}>
 
-            {/* Animated border glow for high rarity */}
-            {currentLevel >= 3 && (
+            {/* Background layers */}
+            <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a1a] via-[#0d0d2b] to-[#050510]" />
+            <div className="absolute inset-0 bg-grid opacity-20" />
+            <div className="absolute inset-0" style={{
+              background: `radial-gradient(ellipse at 50% 30%, ${rarity.accent}15, transparent 70%)`,
+            }} />
+
+            {/* Scan line */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
               <motion.div
-                className="absolute inset-0 rounded-2xl pointer-events-none"
-                style={{
-                  background: `linear-gradient(135deg, ${rarity.borderColor}, transparent 40%, transparent 60%, ${rarity.borderColor})`,
-                  opacity: 0.3,
-                }}
-                animate={{ opacity: [0.2, 0.4, 0.2] }}
-                transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+                className="absolute inset-x-0 h-px"
+                style={{ background: `linear-gradient(90deg, transparent, ${rarity.accent}40, transparent)` }}
+                animate={{ y: ["-10%", "110%"] }}
+                transition={{ repeat: Infinity, duration: 4, ease: "linear" }}
               />
-            )}
+            </div>
 
-            {/* Background */}
-            <div className={`absolute inset-0 bg-gradient-to-br ${rarity.bgGrad} to-slate-900`} />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.08),transparent_50%)]" />
-
-            {/* Content wrapper */}
-            <div className="relative">
+            {/* Content */}
+            <div className="relative flex flex-col h-full p-6">
               {/* Header */}
-              <div className="border-b border-indigo-500/20 bg-indigo-500/5 px-6 py-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Shield className="h-5 w-5 text-indigo-400" />
-                    <span className="text-sm font-bold tracking-widest text-indigo-300">AI AGENT PASSPORT</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${rarity.color}`} style={{ borderColor: rarity.borderColor }}>
-                      {rarity.label}
-                    </span>
-                    <span className="text-xs text-slate-500">NO. {userNumber ? String(userNumber).padStart(6, "0") : "000000"}</span>
-                  </div>
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-2">
+                  <Shield className="h-4 w-4" style={{ color: rarity.accent }} />
+                  <span className="text-xs font-bold tracking-[0.2em] uppercase" style={{ color: rarity.accent }}>AI AGENT</span>
+                </div>
+                <span className={`rounded-md border px-2 py-0.5 text-[10px] font-bold ${rarity.color} ${rarity.border}`}>
+                  {rarity.label}
+                </span>
+              </div>
+
+              {/* Avatar */}
+              <div className="flex justify-center mb-5">
+                <div className={`relative h-28 w-28 rounded-xl border-2 overflow-hidden ${rarity.border} ${rarity.glow}`}
+                  style={{ boxShadow: `0 0 30px ${rarity.accent}20` }}>
+                  {aiAvatarUrl ? (
+                    <img src={aiAvatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="h-full w-full" dangerouslySetInnerHTML={{ __html: pixelAvatarSvg }} />
+                  )}
+                  {avatarLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                      <Sparkles className="h-5 w-5 animate-pulse" style={{ color: rarity.accent }} />
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Body */}
-              <div className="p-6">
-                <div className="flex gap-6">
-                  {/* Avatar */}
-                  <div className="flex-shrink-0">
-                    <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.3 }}
-                      className={`relative h-28 w-28 overflow-hidden rounded-xl border-2 ${rarity.glow}`}
-                      style={{ borderColor: rarity.borderColor }}>
-                      {aiAvatarUrl ? (
-                        <img src={aiAvatarUrl} alt="Avatar" className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="h-full w-full" dangerouslySetInnerHTML={{ __html: pixelAvatarSvg }} />
-                      )}
-                      {avatarLoading && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                          <Sparkles className="h-6 w-6 animate-pulse text-indigo-400" />
-                        </div>
-                      )}
-                    </motion.div>
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 space-y-3">
-                    <div>
-                      <p className="text-2xl font-bold text-white">{displayName}</p>
-                      <div className="mt-1 flex items-center gap-2">
-                        <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold ${rarity.color}`} style={{ borderColor: rarity.borderColor }}>
-                          <Star className="h-2.5 w-2.5" /> {rarity.name}
-                        </span>
-                        <span className="text-xs text-slate-500">·</span>
-                        <ShinyText text={displayLevel} className="text-xs font-medium" speed={3} />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-2">
-                        <p className="text-[10px] text-slate-500">战斗力</p>
-                        <CountUp target={power} className="text-lg font-bold text-amber-400" duration={1.5} />
-                      </div>
-                      <div className="rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-2">
-                        <p className="text-[10px] text-slate-500">地区据点</p>
-                        <p className="flex items-center gap-1 text-sm font-semibold text-white"><MapPin className="h-3 w-3 text-indigo-400" />{card?.province || "未知"}</p>
-                      </div>
-                    </div>
-                  </div>
+              {/* Name & Level */}
+              <div className="text-center mb-5">
+                <h2 className="text-xl font-black text-white mb-1">{displayName}</h2>
+                <div className="flex items-center justify-center gap-2">
+                  <Star className="h-3 w-3" style={{ color: rarity.accent }} />
+                  <span className={`text-xs font-bold ${rarity.color}`}>{rarity.name}</span>
+                  <span className="text-xs text-slate-500">·</span>
+                  <ShinyText text={displayLevel} className="text-xs font-medium" speed={4} />
                 </div>
+              </div>
 
-                {/* Equipment */}
-                <div className="mt-5 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-                  <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-slate-400"><Swords className="h-3.5 w-3.5" />已装备</p>
-                  <div className="flex flex-wrap gap-2">
-                    {(card?.tools || [tool]).map((t) => (
-                      <motion.span key={t} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                        className="rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-xs font-medium text-indigo-300">
-                        {t}
-                      </motion.span>
-                    ))}
-                  </div>
+              {/* Stats Grid */}
+              <div className="grid grid-cols-2 gap-3 mb-5">
+                <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 text-center">
+                  <p className="text-[10px] text-slate-500 mb-1">战斗力</p>
+                  <CountUp target={power} className="text-xl font-black text-amber-400" duration={1.5} />
                 </div>
+                <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 text-center">
+                  <p className="text-[10px] text-slate-500 mb-1">编号</p>
+                  <p className="text-xl font-black text-white">#{userNumber ? String(userNumber).padStart(6, "0") : "000000"}</p>
+                </div>
+              </div>
 
-                {/* QR placeholder */}
-                <div className="mt-5 flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
-                  <div>
-                    <p className="text-xs text-slate-500">扫码生成你的 AI 身份</p>
-                    <p className="text-[10px] text-slate-600">liusq.icu</p>
-                  </div>
-                  <div className="h-12 w-12 rounded-lg bg-white/10 flex items-center justify-center border border-white/[0.06]">
-                    <span className="text-[10px] text-slate-500">QR</span>
-                  </div>
+              {/* Equipment */}
+              <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 mb-4">
+                <p className="mb-2 flex items-center gap-1.5 text-[10px] font-medium text-slate-500">
+                  <Swords className="h-3 w-3" /> 已装备
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {(card?.tools || [tool]).slice(0, 4).map(t => (
+                    <span key={t} className="rounded-md border px-2 py-0.5 text-[10px] font-medium"
+                      style={{ borderColor: `${rarity.accent}30`, color: rarity.accent, background: `${rarity.accent}10` }}>
+                      {t}
+                    </span>
+                  ))}
                 </div>
+              </div>
+
+              {/* Province */}
+              <div className="flex items-center gap-2 mb-4">
+                <MapPin className="h-3.5 w-3.5 text-indigo-400" />
+                <span className="text-xs text-slate-400">{card?.province || "未知"}</span>
               </div>
 
               {/* Footer */}
-              <div className="border-t border-indigo-500/10 bg-indigo-500/5 px-6 py-3 text-center">
-                <p className="text-[10px] text-slate-500 tracking-wider">AI AGENT MAP · liusq.icu</p>
+              <div className="mt-auto border-t border-white/[0.06] pt-3 flex items-center justify-between">
+                <div>
+                  <p className="text-[9px] text-slate-600">扫码生成你的 AI 身份</p>
+                  <p className="text-[8px] text-slate-700">liusq.icu</p>
+                </div>
+                <div className="h-10 w-10 rounded-lg bg-white/5 border border-white/[0.06] flex items-center justify-center">
+                  <span className="text-[8px] text-slate-600">QR</span>
+                </div>
               </div>
             </div>
-          </motion.div>
-        </FadeIn>
+          </div>
+        </motion.div>
 
-        {/* Controls */}
-        <FadeIn delay={0.2} className="lg:col-span-2">
+        {/* Right: Controls */}
+        <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <div className="space-y-4">
             {/* Manual mode */}
             {!card && (
-              <SpotlightCard className="space-y-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 backdrop-blur-xl" spotlightColor="rgba(99, 102, 241, 0.08)">
+              <SpotlightCard className="space-y-3 p-5" spotlightColor="rgba(99, 102, 241, 0.06)">
                 <label className="block text-sm text-slate-400">
                   昵称
-                  <input value={name} onChange={(e) => setName(e.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 p-3 text-white focus:border-indigo-500/50 focus:outline-none" />
+                  <input value={name} onChange={e => setName(e.target.value)}
+                    className="mt-2 w-full rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-sm text-white focus:border-indigo-500/40 focus:outline-none" />
                 </label>
                 <label className="block text-sm text-slate-400">
                   AI 等级
-                  <select value={level} onChange={(e) => setLevel(Number(e.target.value))} className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 p-3 text-white focus:border-indigo-500/50 focus:outline-none">
-                    {[1, 2, 3, 4, 5].map((lv) => (<option key={lv} value={lv}>{levelName(lv)}</option>))}
+                  <select value={level} onChange={e => setLevel(Number(e.target.value))}
+                    className="mt-2 w-full rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-sm text-white focus:border-indigo-500/40 focus:outline-none">
+                    {[1,2,3,4,5].map(lv => <option key={lv} value={lv}>{levelName(lv)}</option>)}
                   </select>
                 </label>
                 <label className="block text-sm text-slate-400">
                   主力工具
-                  <input value={tool} onChange={(e) => setTool(e.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 p-3 text-white focus:border-indigo-500/50 focus:outline-none" />
+                  <input value={tool} onChange={e => setTool(e.target.value)}
+                    className="mt-2 w-full rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 text-sm text-white focus:border-indigo-500/40 focus:outline-none" />
                 </label>
                 <motion.button onClick={generateAiAvatar} disabled={avatarLoading} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-500/20 disabled:opacity-50">
+                  className="btn-primary w-full justify-center !bg-gradient-to-r !from-purple-500 !to-pink-500">
                   <Sparkles className="h-4 w-4" /> {avatarLoading ? "AI 生成中..." : "生成 AI 头像"}
                 </motion.button>
               </SpotlightCard>
@@ -285,18 +265,18 @@ export default function ShareContent() {
               onDownload={handleDownload}
             />
 
-            {/* Quick actions */}
+            {/* Actions */}
             <div className="flex gap-3">
               <motion.button onClick={handleDownload} disabled={generating} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 disabled:opacity-50">
+                className="btn-primary flex-1 justify-center">
                 <Download className="h-4 w-4" /> {generating ? "生成中..." : "保存身份卡"}
               </motion.button>
-              <a href="/survey" className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-slate-200 transition-all hover:border-white/20 hover:bg-white/[0.08]">
+              <a href="/survey" className="btn-ghost">
                 <RefreshCw className="h-4 w-4" /> 再测一次
               </a>
             </div>
           </div>
-        </FadeIn>
+        </motion.div>
       </div>
     </main>
   );
