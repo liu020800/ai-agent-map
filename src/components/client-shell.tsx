@@ -6,9 +6,7 @@ export default function ClientShell({ children }: { children: React.ReactNode })
   return (
     <>
       <Navbar />
-      <div className="relative pt-20">
-        {children}
-      </div>
+      <div className="pt-20">{children}</div>
     </>
   );
 }
