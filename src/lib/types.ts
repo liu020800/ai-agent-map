@@ -67,3 +67,58 @@ export type CardData = {
   created_at: string;
   user_number: number;
 };
+
+/* ------------------------------------------------------------------ */
+/*  Trends                                                              */
+/* ------------------------------------------------------------------ */
+
+export type TrendDirection = "up" | "down" | "stable";
+
+export type ToolTrend = {
+  id: string;
+  name: string;
+  category: "agent" | "app" | "automation" | "local";
+  users: number;
+  growthRate: number;
+  heat: number;
+  direction: TrendDirection;
+};
+
+export type TrendsMatrix = {
+  id: string;
+  title: string;
+  description: string;
+  heat: number;
+  direction: TrendDirection;
+  label: "Rising" | "Stable" | "Exploding" | "Cooling";
+  tools: string[];
+};
+
+export type TrendsSnapshot = {
+  generatedAt: string;
+  todayNewSignals: number;
+  fastestGrowing: string;
+  fastestGrowthRate: number;
+  mostActiveScene: string;
+  totalTools: number;
+  agentShare: number;
+  tools: ToolTrend[];
+  matrix: TrendsMatrix[];
+  timeline: { day: string; signals: number; active: number }[];
+  roleDistribution: { role: string; share: number; tone: string }[];
+};
+
+export type SurveyFormPayload = {
+  tools: string[];
+  scenarios: string[];
+  province: string;
+  city: string;
+  nickname?: string;
+  signature?: string;
+  userType: "agent" | "app";
+  roleTitle: string;
+  agentLevel: number;
+  signalStrength: number;
+  identityId: string;
+  createdAt: string;
+};

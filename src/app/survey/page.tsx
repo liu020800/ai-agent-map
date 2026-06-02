@@ -1,394 +1,945 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, useCallback, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import { toPng } from "html-to-image";
 import {
   ArrowLeft,
   ArrowRight,
-  Briefcase,
   Check,
+  CheckCircle2,
+  ChevronRight,
+  CircuitBoard,
   Cpu,
+  Download,
   FileText,
   MapPin,
   Radio,
+  RefreshCw,
+  ScanLine,
   Shield,
   Sparkles,
   Sword,
-  User,
   Wand2,
-  Zap,
 } from "lucide-react";
-import LiquidGlassCard from "@/components/react-bits/LiquidGlassCard";
-import { computeLevel, levelName } from "@/lib/level";
+import { PageShell, Section } from "@/components/ui";
 import { generateAvatarSvg } from "@/lib/avatar";
-import { PageShell, SectionHeader, AgentPassportCard } from "@/components/ui";
 import { submitCard } from "@/lib/api-client";
+import {
+  SURVEY_TOOLS,
+  SURVEY_SCENARIOS,
+  SURVEY_PROVINCES,
+  deriveRole,
+  deriveAgentLevel,
+  deriveSignalStrength,
+  submitSurvey,
+  generateIdentityCard,
+  generateIdentityId,
+  buildIdentityId as buildIdentityIdFromSeed,
+} from "@/lib/survey-service";
+import { toolColor } from "@/data/mock";
+import type { SurveyFormPayload } from "@/lib/types";
 
-const APP_GROUPS = [
-  { label: "通用 AI", items: ["豆包", "DeepSeek", "Kimi", "ChatGPT", "Claude", "Gemini", "通义千问", "腾讯元宝"] },
+type Step = 1 | 2 | 3 | 4;
+type SubmitStatus = "idle" | "loading" | "success" | "error";
+
+const STEPS: { key: Step; label: string; desc: string; icon: typeof Sword }[] = [
+  { key: 1, label: "选择装备", desc: "装配你的 AI Agent 工具栈", icon: Sword },
+  { key: 2, label: "使用场景", desc: "定义你的作战方式", icon: FileText },
+  { key: 3, label: "地区据点", desc: "写入城市信号", icon: MapPin },
+  { key: 4, label: "生成档案", desc: "生成 AI Agent Passport", icon: Shield },
 ];
-const AGENT_GROUPS = [
-  { label: "编程 Agent", items: ["Codex", "Claude Code", "OpenCode", "Cursor", "Trae", "CodeBuddy"] },
-  { label: "自动化 Agent", items: ["Dify", "n8n", "Hermes", "OpenClaw"] },
-];
-const FREQUENCIES = ["偶尔使用", "每周使用", "每天使用", "工作主力", "已经形成自动化工作流"];
-const PURPOSES = ["日常聊天", "写代码", "写作", "数据分析", "自动化工作流", "学习研究", "创意设计", "其他"];
-const OCCUPATIONS = ["程序员", "产品经理", "设计师", "学生", "教师", "自媒体", "企业管理", "自由职业", "其他"];
-const PROVINCES = ["北京", "天津", "上海", "重庆", "河北", "山西", "辽宁", "吉林", "黑龙江", "江苏", "浙江", "安徽", "福建", "江西", "山东", "河南", "湖北", "湖南", "广东", "海南", "四川", "贵州", "云南", "陕西", "甘肃", "青海", "台湾", "内蒙古", "广西", "西藏", "宁夏", "新疆", "香港", "澳门", "其他"];
-const STEPS = [
-  { label: "选择装备", desc: "装配你的核心 AI 工具", icon: Sword },
-  { label: "使用场景", desc: "定义你的作战方式", icon: FileText },
-  { label: "地区据点", desc: "写入你的城市信号", icon: MapPin },
-  { label: "生成档案", desc: "确认并生成 Passport", icon: Shield },
-];
+
 const RARITY_NAME = ["普通", "普通", "稀有", "史诗", "传说", "神话"];
 const RARITY_ACCENT = ["#737373", "#737373", "#22d3ee", "#a855f7", "#fbbf24", "#fb7185"];
 
 export default function SurveyPage() {
-  const [step, setStep] = useState(1);
-  const [userType, setUserType] = useState<"app" | "agent">("agent");
-  const [selectedTools, setSelectedTools] = useState<string[]>([]);
-  const [primaryTool, setPrimaryTool] = useState("");
-  const [frequency, setFrequency] = useState("");
-  const [purpose, setPurpose] = useState<string[]>([]);
-  const [nickname, setNickname] = useState("");
-  const [occupation, setOccupation] = useState("");
-  const [province, setProvince] = useState("上海");
-  const [city, setCity] = useState("");
-  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
-  const [message, setMessage] = useState("");
+  const [step, setStep] = useState<Step>(1);
+  const [userType, setUserType] = useState<"agent" | "app">("agent");
+  const [tools, setTools] = useState<string[]>([]);
+  const [scenarios, setScenarios] = useState<string[]>([]);
+  const [province, setProvince] = useState<string>(SURVEY_PROVINCES[1]);
+  const [city, setCity] = useState<string>("");
+  const [nickname, setNickname] = useState<string>("");
+  const [signature, setSignature] = useState<string>("");
+  const [submitStatus, setSubmitStatus] = useState<SubmitStatus>("idle");
+  const [submitMessage, setSubmitMessage] = useState<string>("");
   const [result, setResult] = useState<{ ai_level: number; ai_level_name: string; card_slug: string; avatar_seed: string } | null>(null);
-  const [levelUp, setLevelUp] = useState<number | null>(null);
-  const submitTimeRef = useRef<number | null>(null);
-  const honeypotRef = useRef("");
-  const prevLevelRef = useRef(1);
+  const [identityId, setIdentityId] = useState<string>(generateIdentityId());
+  const [createdAt, setCreatedAt] = useState<string>(new Date().toISOString());
+  const [downloaded, setDownloaded] = useState(false);
+  const [copied, setCopied] = useState<"text" | "link" | null>(null);
+  const [cardSeed, setCardSeed] = useState<string>(() =>
+    typeof window === "undefined" ? "" : Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+  );
 
-  useEffect(() => {
-    submitTimeRef.current = Date.now();
-  }, []);
+  const identityCardRef = useRef<HTMLDivElement>(null);
+  const startedAt = useRef<number>(0);
 
-  const toolGroups = userType === "agent" ? AGENT_GROUPS : APP_GROUPS;
-  const previewLevel = useMemo(() => computeLevel(userType, selectedTools), [userType, selectedTools]);
-  const previewTitle = useMemo(() => levelName(previewLevel), [previewLevel]);
-  const previewAvatar = useMemo(() => generateAvatarSvg(`${nickname}-${userType}-${selectedTools.join("|")}-${previewLevel}`, 80, previewLevel, selectedTools[0]), [nickname, userType, selectedTools, previewLevel]);
-  const rarityAccent = RARITY_ACCENT[previewLevel] || "#22d3ee";
-  const rarityName = RARITY_NAME[previewLevel] || "普通";
-  const battlePower = 420 + previewLevel * 1800 + selectedTools.length * 360 + (purpose.length * 120);
+  const role = useMemo(() => deriveRole(scenarios), [scenarios]);
+  const level = useMemo(() => deriveAgentLevel(tools, userType), [tools, userType]);
+  const signal = useMemo(() => deriveSignalStrength(level, scenarios.length), [level, scenarios.length]);
+  const rarityAccent = RARITY_ACCENT[level] ?? "#22d3ee";
+  const rarityName = RARITY_NAME[level] ?? "普通";
 
-  useEffect(() => {
-    if (previewLevel > prevLevelRef.current) {
-      setLevelUp(previewLevel);
-      const timer = setTimeout(() => setLevelUp(null), 2400);
-      return () => clearTimeout(timer);
-    }
-    prevLevelRef.current = previewLevel;
-  }, [previewLevel]);
+  const avatarSeed = useMemo(() => {
+    if (result?.avatar_seed) return result.avatar_seed;
+    return [nickname || "agent", userType, tools.join("|") || "none", String(level), cardSeed].join("-");
+  }, [result, nickname, userType, tools, level, cardSeed]);
 
-  const canNext =
-    step === 1 ? selectedTools.length > 0 :
-    step === 2 ? !!frequency && purpose.length > 0 :
-    step === 3 ? province.trim().length > 0 :
-    true;
+  const avatarSvg = useMemo(
+    () => generateAvatarSvg(avatarSeed, 200, level, tools[0] ?? ""),
+    [avatarSeed, level, tools],
+  );
 
-  const nextHint =
-    step === 1 ? "至少装备 1 个工具后才能继续。" :
-    step === 2 ? "请先选择使用频率，并至少选择 1 个使用场景。" :
-    step === 3 ? "至少选择一个地区据点。" :
-    "";
+  const toolCount = tools.length;
+  const scenarioCount = scenarios.length;
 
-  const toggleTool = (tool: string) => {
-    setSelectedTools((prev) => {
-      const next = prev.includes(tool) ? prev.filter((item) => item !== tool) : [...prev, tool];
-      if (!next.includes(primaryTool)) setPrimaryTool(next[0] || "");
-      return next;
-    });
+  const buildPayload = useCallback(
+    (): SurveyFormPayload => ({
+      tools,
+      scenarios,
+      province,
+      city,
+      nickname: nickname.trim() || undefined,
+      signature: signature.trim() || undefined,
+      userType,
+      roleTitle: role.title,
+      agentLevel: level,
+      signalStrength: signal,
+      identityId,
+      createdAt,
+    }),
+    [tools, scenarios, province, city, nickname, signature, userType, role.title, level, signal, identityId, createdAt],
+  );
+
+  const canNext = useMemo(() => {
+    if (step === 1) return toolCount > 0;
+    if (step === 2) return scenarioCount > 0;
+    if (step === 3) return province.trim().length > 0 && city.trim().length > 0;
+    return true;
+  }, [step, toolCount, scenarioCount, province, city]);
+
+  const toggleTool = (name: string) => {
+    setTools((prev) => (prev.includes(name) ? prev.filter((t) => t !== name) : [...prev, name]));
   };
 
-  const handleSubmit = useCallback(async () => {
-    setStatus("loading");
-    setMessage("");
-    try {
-      const result = await submitCard({
-        nickname: nickname.trim() || undefined,
-        province,
-        city: city.trim() || undefined,
-        occupation: occupation || undefined,
-        user_type: userType,
-        tools: selectedTools,
-        primary_tool: primaryTool || selectedTools[0],
-        usage_frequency: frequency,
-        usage_purpose: purpose.length > 0 ? purpose : undefined,
-        honeypot: honeypotRef.current || undefined,
-        submit_duration_ms: submitTimeRef.current ? Date.now() - submitTimeRef.current : 0,
-      });
-      setResult(result);
-      setStatus("success");
-    } catch (error) {
-      setStatus("error");
-      setMessage(error instanceof Error ? error.message : "提交失败");
-    }
-  }, [nickname, province, city, occupation, userType, selectedTools, primaryTool, frequency, purpose]);
+  const toggleScenario = (id: string) => {
+    setScenarios((prev) => (prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]));
+  };
 
-  if (status === "success" && result) {
-    return (
-      <main id="main-content" className="relative min-h-[88vh] overflow-hidden pb-16 pt-10">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-400/10 blur-3xl" />
-          <div className="absolute left-[30%] top-[30%] h-48 w-48 rounded-full bg-violet-500/12 blur-3xl" />
-        </div>
-        <PageShell width="narrow">
-          <div className="relative z-10 flex flex-col items-center justify-center text-center">
-            <motion.div initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 160, damping: 14 }} className="relative mb-6 flex h-24 w-24 items-center justify-center rounded-[28px] border border-cyan-300/25 bg-cyan-300/[0.08] shadow-[0_0_36px_rgba(34,211,238,0.18)]">
-              <Check className="h-12 w-12 text-cyan-300" />
-            </motion.div>
-            <p className="title-font mb-3 text-[11px] uppercase tracking-[0.32em] text-cyan-300/75">Passport Ready</p>
-            <h1 className="title-font text-4xl font-black text-white sm:text-5xl">身份档案已生成</h1>
-            <p className="mt-4 max-w-xl text-base leading-8 text-white/65">你的 AI 玩家身份已经写入全国图谱，下一步可以进入专属 Passport 页面保存、分享并查看同城信号。</p>
-            <div className="mt-6">
-              <AgentPassportCard
-                nickname={nickname || "Agent_Anonymous"}
-                province={province + (city ? ` · ${city}` : "")}
-                primaryTool={primaryTool || selectedTools[0] || "Codex"}
-                tools={selectedTools}
-                level={result.ai_level}
-                levelName={result.ai_level_name}
-                avatarSeed={result.avatar_seed}
-                compact
-                className="mx-auto"
-              />
-            </div>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link href={`/share?slug=${result.card_slug}`} className="btn-lusion inline-flex"><Shield className="h-4 w-4" /> 查看我的 AI Agent Passport</Link>
-              <Link href="/map" className="btn-lusion-outline inline-flex justify-center"><Radio className="h-4 w-4" /> 查看全国图谱</Link>
-            </div>
-          </div>
-        </PageShell>
-      </main>
-    );
-  }
+  const goNext = () => {
+    if (!canNext) return;
+    setStep((current) => (current < 4 ? ((current + 1) as Step) : current));
+  };
+
+  const goPrev = () => setStep((current) => (current > 1 ? ((current - 1) as Step) : current));
+
+  const regenerateAvatar = () => {
+    setCardSeed(Date.now().toString(36) + Math.random().toString(36).slice(2, 8));
+  };
+
+  const handleSubmit = async () => {
+    setSubmitStatus("loading");
+    setSubmitMessage("");
+    const payload = buildPayload();
+    try {
+      const res = await submitCard({
+        nickname: payload.nickname,
+        province: payload.province,
+        city: payload.city,
+        user_type: payload.userType,
+        tools: payload.tools,
+        primary_tool: payload.tools[0],
+        usage_frequency: "工作主力",
+        usage_purpose: payload.scenarios,
+        submit_duration_ms: Date.now() - startedAt.current,
+      });
+      setResult(res);
+      setIdentityId(buildIdentityIdFromSeed(res.avatar_seed || avatarSeed));
+      setCreatedAt(new Date().toISOString());
+      setSubmitStatus("success");
+      setSubmitMessage("信号已写入全国图谱");
+    } catch (error) {
+      const fallback = await submitSurvey(payload);
+      setIdentityId(fallback.identityId);
+      setCreatedAt(fallback.createdAt);
+      setSubmitStatus("success");
+      setSubmitMessage(error instanceof Error ? "本地预览已生成, 服务暂不可达" : "本地预览已生成");
+    }
+  };
+
+  const shareText = useMemo(() => {
+    const name = nickname.trim() || "匿名 Agent";
+    const provinceText = city ? province + " · " + city : province;
+    const toolList = tools.slice(0, 3).join("、") || "尚未装配";
+    return "我是 " + name + ", " + role.title + ", " + rarityName + " 等级 " + level + "。主用工具: " + toolList + "。城市据点: " + provinceText + "。已在 AI Agent Map 生成我的身份卡 → " + (typeof window !== "undefined" ? window.location.origin : "https://liusq.icu");
+  }, [nickname, role.title, rarityName, level, tools, province, city]);
+
+  const copyShare = async () => {
+    try {
+      await navigator.clipboard.writeText(shareText);
+      setCopied("text");
+      setTimeout(() => setCopied(null), 2000);
+    } catch {
+      setCopied(null);
+    }
+  };
+
+  const copyLink = async () => {
+    try {
+      const base = typeof window !== "undefined" ? window.location.origin : "";
+      await navigator.clipboard.writeText(base + (result?.card_slug ? "/share?slug=" + result.card_slug : "/survey"));
+      setCopied("link");
+      setTimeout(() => setCopied(null), 2000);
+    } catch {
+      setCopied(null);
+    }
+  };
+
+  const downloadCard = useCallback(async () => {
+    if (!identityCardRef.current) return;
+    try {
+      const dataUrl = await toPng(identityCardRef.current, { quality: 0.95, pixelRatio: 2, backgroundColor: "#05060a" });
+      const link = document.createElement("a");
+      link.download = "ai-agent-card-" + identityId + ".png";
+      link.href = dataUrl;
+      link.click();
+      setDownloaded(true);
+      setTimeout(() => setDownloaded(false), 2400);
+    } catch {
+      setDownloaded(false);
+    }
+  }, [identityId]);
+
+  const regenerateCard = async () => {
+    regenerateAvatar();
+    setIdentityId(generateIdentityId());
+    setCreatedAt(new Date().toISOString());
+    try {
+      const fresh = await generateIdentityCard(buildPayload());
+      setIdentityId(fresh.identityId);
+      setCreatedAt(fresh.createdAt);
+    } catch {
+      /* keep local identity */
+    }
+  };
 
   return (
-    <main className="relative overflow-hidden pb-12 pt-8">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-[10%] top-[8%] h-48 w-48 rounded-full bg-cyan-400/10 blur-3xl" />
-        <div className="absolute right-[8%] top-[14%] h-64 w-64 rounded-full bg-violet-500/10 blur-3xl" />
-        <div className="absolute bottom-[10%] left-[30%] h-56 w-56 rounded-full bg-fuchsia-500/8 blur-3xl" />
-      </div>
+    <main className="relative min-h-screen overflow-hidden pb-24 pt-8">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10"
+        style={{
+          background:
+            "radial-gradient(circle at 12% 8%, rgba(34,211,238,0.16), transparent 28%), radial-gradient(circle at 88% 6%, rgba(168,85,247,0.14), transparent 30%), radial-gradient(circle at 50% 100%, rgba(236,72,153,0.10), transparent 36%)",
+        }}
+      />
+      <div aria-hidden className="hero-noise" />
 
-      <AnimatePresence>
-        {levelUp && (
-          <motion.div initial={{ opacity: 0, scale: 0.7, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 1.1, y: -20 }} className="fixed inset-x-0 top-28 z-50 flex justify-center px-4">
-            <div className="rounded-[24px] border border-amber-400/20 bg-[#090b11]/92 px-7 py-4 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur-2xl">
-              <div className="flex items-center gap-4">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-400/10"><Zap className="h-5 w-5 text-amber-300" /></div>
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-300">LEVEL UP</p>
-                  <p className="title-font text-lg font-black text-white">{previewTitle} · 身份等级提升</p>
+      <Section className="relative z-10" spacing="md">
+        <PageShell width="wide">
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="hero-panel relative overflow-hidden rounded-[28px] p-6 sm:p-10"
+          >
+            <div aria-hidden className="cyber-grid absolute inset-0 opacity-50" />
+            <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+              <div className="absolute inset-x-0 h-px animate-scan-line bg-gradient-to-r from-transparent via-cyan-300/60 to-transparent" />
+            </div>
+            <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/70 to-transparent" />
+
+            <div className="relative grid grid-cols-1 gap-10 lg:grid-cols-[1.5fr_1fr] lg:items-center">
+              <div>
+                <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/[0.05] px-4 py-2">
+                  <ScanLine className="h-3.5 w-3.5 text-cyan-300/85" />
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.32em] text-cyan-300/85">Identity Creator</span>
+                </div>
+                <h1 className="title-font text-balance text-3xl font-black leading-[1.05] text-white sm:text-4xl lg:text-[58px]">
+                  <span className="block">创建你的 AI Agent 身份档案</span>
+                  <span className="mt-2 block bg-gradient-to-r from-cyan-200 via-violet-300 to-pink-300 bg-clip-text text-transparent">
+                    四步生成, 立刻点亮地图
+                  </span>
+                </h1>
+                <p className="mt-5 max-w-2xl text-sm leading-7 text-white/60 sm:text-base">
+                  选择你的装备、定义作战场景、写入城市信号, 生成专属 AI Agent Passport。每张卡都会永久写入全国图谱, 并出现在趋势榜、地区榜与角色榜里。
+                </p>
+                <div className="mt-6 flex flex-wrap items-center gap-2 text-[11px] text-white/55">
+                  <span className="rounded-full border border-white/[0.06] bg-white/[0.02] px-3 py-1.5">总计 4 步 · 约 60 秒</span>
+                  <span className="rounded-full border border-white/[0.06] bg-white/[0.02] px-3 py-1.5">支持 12+ AI 工具</span>
+                  <span className="rounded-full border border-white/[0.06] bg-white/[0.02] px-3 py-1.5">支持 10 大场景</span>
                 </div>
               </div>
+
+              <StepProgress step={step} />
             </div>
           </motion.div>
-        )}
-      </AnimatePresence>
 
-      <PageShell width="wide">
-        <SectionHeader
-          eyebrow="Identity Creator"
-          title="创建你的 AI 身份档案"
-          description="不再是普通长表单。这里是你的 Agent 角色创建器：装配工具、定义场景、标记据点，然后生成专属 AI Agent Passport。"
-          align="center"
-          accent="cyan"
-          className="!mb-10"
-        />
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/[0.06] bg-black/30 px-4 py-3">
+            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-white/45">
+              <CircuitBoard className="h-3.5 w-3.5 text-cyan-300" /> 玩家阵营
+            </div>
+            <div className="flex items-center gap-1 rounded-full border border-white/[0.06] bg-white/[0.02] p-1">
+              {[
+                { key: "agent", label: "Agent 工作流玩家" },
+                { key: "app", label: "通用 AI 用户" },
+              ].map((opt) => {
+                const active = userType === opt.key;
+                return (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => setUserType(opt.key as "agent" | "app")}
+                    className={
+                      "rounded-full px-3 py-1.5 text-xs transition " +
+                      (active
+                        ? "bg-gradient-to-r from-cyan-300/20 to-violet-300/20 text-white shadow-[0_0_18px_rgba(34,211,238,0.25)]"
+                        : "text-white/55 hover:text-white")
+                    }
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-        <div className="mb-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {STEPS.map((item, index) => {
-            const idx = index + 1;
-            const active = step === idx;
-            const done = step > idx;
-            return (
-              <div key={item.label} className={(active ? "border-cyan-300/18 bg-cyan-300/[0.05]" : "border-white/[0.04] bg-white/[0.015]") + " rounded-[24px] border p-4 backdrop-blur-xl transition-all"}>
-                <div className="mb-3 flex items-center justify-between">
-                  <div className={(done ? "bg-cyan-300/15 text-cyan-300" : active ? "bg-white/10 text-white" : "bg-white/5 text-white/40") + " flex h-10 w-10 items-center justify-center rounded-2xl"}>
-                    {done ? <Check className="h-4 w-4" /> : <item.icon className="h-4 w-4" />}
-                  </div>
-                  <span className="text-[10px] uppercase tracking-[0.24em] text-white/30">0{idx}</span>
-                </div>
-                <p className="text-sm font-semibold text-white">{item.label}</p>
-                <p className="mt-1 text-xs leading-6 text-white/40">{item.desc}</p>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]">
-          <div className="min-w-0 space-y-6">
-            <LiquidGlassCard className="p-5 sm:p-6" mode="shader" blurAmount={0.08} aberrationIntensity={1.8} cornerRadius={30}>
-              <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-                <div>
-                  <p className="title-font text-[11px] uppercase tracking-[0.28em] text-cyan-300/72">Step {step} / 4</p>
-                  <h2 className="title-font mt-2 text-2xl font-black text-white sm:text-3xl">{STEPS[step - 1].label}</h2>
-                  <p className="mt-2 text-sm leading-7 text-white/45">{STEPS[step - 1].desc}</p>
-                </div>
-                <div className="rounded-full border border-white/[0.04] bg-white/[0.015] px-4 py-2 text-[10px] uppercase tracking-[0.22em] text-white/40">Agent Passport Builder</div>
-              </div>
-
+          <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[1.5fr_1fr]">
+            <div className="overflow-hidden rounded-[28px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.01))] p-5 backdrop-blur-xl sm:p-7">
               <AnimatePresence mode="wait">
-                {step === 1 && (
-                  <motion.div key="s1" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -18 }} className="space-y-6">
-                    <div className="rounded-[24px] border border-white/[0.04] bg-white/[0.015] p-4">
-                      <div className="mb-4 flex rounded-xl border border-white/[0.04] bg-white/[0.01] p-1">
-                        {(["agent", "app"] as const).map((type) => (
-                          <button key={type} onClick={() => { setUserType(type); setSelectedTools([]); setPrimaryTool(""); }} className={(userType === type ? "bg-white/10 text-white" : "text-white/45 hover:text-white/80") + " flex-1 rounded-xl py-3 text-sm font-semibold transition-all"}>
-                            {type === "agent" ? "🤖 Agent 装备" : "📱 AI 应用"}
-                          </button>
-                        ))}
-                      </div>
-                      <div className="mb-4 flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold text-white">选择你的核心装备</p>
-                          <p className="mt-1 text-xs text-white/40">工具会决定你的等级、稀有度与身份标签。</p>
-                        </div>
-                        <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/15 bg-cyan-300/[0.05] px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-cyan-300/75"><Wand2 className="h-3 w-3" /> 已装备 {selectedTools.length}</div>
-                      </div>
-                      <div className="space-y-5">
-                        {toolGroups.map((group) => (
-                          <div key={group.label}>
-                            <div className="mb-3 text-[11px] uppercase tracking-[0.22em] text-white/35">{group.label}</div>
-                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
-                              {group.items.map((tool) => {
-                                const selected = selectedTools.includes(tool);
-                                const primary = primaryTool === tool || (!primaryTool && selectedTools[0] === tool);
-                                return (
-                                  <motion.button key={tool} onClick={() => toggleTool(tool)} whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }} className={(selected ? "border-cyan-300/30 bg-cyan-300/[0.07] shadow-[0_0_24px_rgba(34,211,238,0.08)]" : "border-white/[0.05] bg-[#0a0b12] hover:border-white/[0.10]") + " relative overflow-hidden rounded-[22px] border p-4 text-left transition-all"}>
-                                    <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent,rgba(255,255,255,.06),transparent)] opacity-70" />
-                                    {selected ? <div className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-cyan-300"><Check className="h-3 w-3 text-black" /></div> : null}
-                                    <div className="relative">
-                                      <p className="text-sm font-bold text-white">{tool}</p>
-                                      <p className="mt-2 text-[11px] text-white/42">{selected ? (primary ? "主力装备" : "已装备") : "点击装备"}</p>
-                                    </div>
-                                  </motion.button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                {step === 1 ? (
+                  <StepShell key="step-1" title="Step 1 · 选择你的 AI 装备" hint="至少选择 1 个工具, 你可以随时调整">
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                      {SURVEY_TOOLS.filter((tool) => userType === "agent" ? tool.category !== "app" : true).map((tool) => {
+                        const active = tools.includes(tool.name);
+                        return (
+                          <SelectableCard
+                            key={tool.id}
+                            active={active}
+                            accent={tool.tone}
+                            label={tool.name}
+                            description={tool.desc}
+                            onClick={() => toggleTool(tool.name)}
+                            category={categoryLabel(tool.category)}
+                          />
+                        );
+                      })}
                     </div>
-                  </motion.div>
-                )}
+                    <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+                      <p className="text-xs text-white/55">
+                        已选 <span className="title-font text-base font-black text-white">{toolCount}</span> 件装备
+                        {toolCount >= 3 ? <span className="ml-2 text-cyan-300">· 火力充足</span> : null}
+                      </p>
+                      <PrimaryNav step={step} onPrev={goPrev} onNext={goNext} canNext={canNext} />
+                    </div>
+                  </StepShell>
+                ) : null}
 
-                {step === 2 && (
-                  <motion.div key="s2" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -18 }} className="space-y-5">
-                    <div className="rounded-[24px] border border-white/[0.04] bg-white/[0.015] p-4">
-                      <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-white"><Zap className="h-5 w-5 text-cyan-300/75" /> 使用频率</h3>
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                        {FREQUENCIES.map((item) => (
-                          <motion.button key={item} onClick={() => setFrequency(item)} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className={(frequency === item ? "border-cyan-300/28 bg-cyan-300/[0.08] text-white" : "border-white/[0.04] bg-[#0a0b12] text-white/58 hover:border-white/[0.10]") + " rounded-[20px] border p-4 text-left text-sm transition-all"}>
-                            <p className="font-semibold">{item}</p>
-                            <p className="mt-2 text-xs text-white/36">决定你的活跃度评级与战斗力档位。</p>
-                          </motion.button>
-                        ))}
-                      </div>
+                {step === 2 ? (
+                  <StepShell key="step-2" title="Step 2 · 你的作战场景" hint="根据选择会自动派发角色称号">
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                      {SURVEY_SCENARIOS.map((sc) => {
+                        const active = scenarios.includes(sc.id);
+                        return (
+                          <SelectableCard
+                            key={sc.id}
+                            active={active}
+                            accent={sc.tone}
+                            label={sc.name}
+                            description={sc.desc}
+                            onClick={() => toggleScenario(sc.id)}
+                            category="场景"
+                          />
+                        );
+                      })}
                     </div>
-                    <div className="rounded-[24px] border border-white/[0.04] bg-white/[0.015] p-4">
-                      <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-white"><FileText className="h-5 w-5 text-cyan-300/75" /> 使用场景</h3>
-                      <div className="flex flex-wrap gap-2.5">
-                        {PURPOSES.map((item) => {
-                          const selected = purpose.includes(item);
-                          return (
-                            <motion.button key={item} onClick={() => setPurpose((prev) => selected ? prev.filter((x) => x !== item) : [...prev, item])} whileTap={{ scale: 0.96 }} className={(selected ? "border-cyan-300/28 bg-cyan-300/[0.08] text-white" : "border-white/[0.04] bg-[#0a0b12] text-white/58 hover:border-white/[0.10]") + " rounded-full border px-4 py-2.5 text-sm transition-all"}>{item}</motion.button>
-                          );
-                        })}
-                      </div>
+                    <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+                      <p className="text-xs text-white/55">
+                        已选 <span className="title-font text-base font-black text-white">{scenarioCount}</span> 个场景 · 角色: <span style={{ color: role.tone }} className="font-semibold">{role.title}</span>
+                      </p>
+                      <PrimaryNav step={step} onPrev={goPrev} onNext={goNext} canNext={canNext} />
                     </div>
-                  </motion.div>
-                )}
+                  </StepShell>
+                ) : null}
 
-                {step === 3 && (
-                  <motion.div key="s3" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -18 }} className="grid gap-4 sm:grid-cols-2">
-                    <FieldCard label="昵称 / 代号"><div className="relative"><User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/25" /><input value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="例如：Agent_0x3F" className="w-full rounded-2xl border border-white/[0.05] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015))] py-3.5 pl-10 pr-4 text-sm text-white placeholder:text-white/25 focus:border-cyan-300/25 focus:outline-none" /></div></FieldCard>
-                    <FieldCard label="职业身份"><div className="relative"><Briefcase className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/25" /><select value={occupation} onChange={(e) => setOccupation(e.target.value)} style={{ colorScheme: "dark" }} className="w-full rounded-2xl border border-white/[0.05] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015))] py-3.5 pl-10 pr-10 text-sm text-white focus:border-cyan-300/25 focus:outline-none"><option value="" className="text-black">请选择</option>{OCCUPATIONS.map((item) => <option key={item} value={item} className="text-black">{item}</option>)}</select></div></FieldCard>
-                    <FieldCard label="省份据点"><select value={province} onChange={(e) => setProvince(e.target.value)} style={{ colorScheme: "dark" }} className="w-full rounded-2xl border border-white/[0.05] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015))] py-3.5 px-4 pr-10 text-sm text-white focus:border-cyan-300/25 focus:outline-none">{PROVINCES.map((item) => <option key={item} value={item} className="text-black">{item}</option>)}</select></FieldCard>
-                    <FieldCard label="城市信号"><div><input value={city} onChange={(e) => setCity(e.target.value)} placeholder="例如：杭州 / 深圳" className="w-full rounded-2xl border border-white/[0.05] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015))] py-3.5 px-4 text-sm text-white placeholder:text-white/25 focus:border-cyan-300/25 focus:outline-none" /><div className="mt-3 flex flex-wrap gap-2"><QuickChip label="暂不透露城市" onClick={() => setCity("暂不透露")} /><QuickChip label="杭州" onClick={() => setCity("杭州")} /><QuickChip label="深圳" onClick={() => setCity("深圳")} /></div></div></FieldCard>
-                  </motion.div>
-                )}
+                {step === 3 ? (
+                  <StepShell key="step-3" title="Step 3 · 你的城市据点" hint="城市字段必填, 其他可以留空">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <FieldInput label="省份" hint="选择你的省份信号中心">
+                        <select
+                          value={province}
+                          onChange={(e) => setProvince(e.target.value)}
+                          className="w-full rounded-2xl border border-white/[0.06] bg-black/40 px-4 py-3 text-white outline-none transition focus:border-cyan-300/40 focus:shadow-[0_0_24px_-6px_rgba(34,211,238,0.4)]"
+                        >
+                          {SURVEY_PROVINCES.map((p) => (
+                            <option key={p} value={p}>{p}</option>
+                          ))}
+                        </select>
+                      </FieldInput>
 
-                {step === 4 && (
-                  <motion.div key="s4" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -18 }} className="space-y-5">
-                    <div className="rounded-[24px] border border-white/[0.04] bg-white/[0.015] p-5">
-                      <div className="mb-5 flex items-start justify-between gap-4">
-                        <div>
-                          <p className="title-font text-[11px] uppercase tracking-[0.28em] text-cyan-300/72">Final Confirm</p>
-                          <h3 className="mt-2 text-xl font-black text-white">你的 AI Agent Passport 即将生成</h3>
-                        </div>
-                        <div className="rounded-full border border-white/[0.04] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: rarityAccent }}>{rarityName}</div>
+                      <FieldInput label="城市" hint="必填, 写入地图信号点">
+                        <input
+                          value={city}
+                          onChange={(e) => setCity(e.target.value)}
+                          placeholder="例如: 张江、徐汇、滨江"
+                          className="w-full rounded-2xl border border-white/[0.06] bg-black/40 px-4 py-3 text-white outline-none transition focus:border-cyan-300/40 focus:shadow-[0_0_24px_-6px_rgba(34,211,238,0.4)]"
+                        />
+                      </FieldInput>
+
+                      <FieldInput label="昵称 (可选)" hint="留空则使用「匿名 Agent」">
+                        <input
+                          value={nickname}
+                          onChange={(e) => setNickname(e.target.value)}
+                          placeholder="你的 Agent 称号"
+                          className="w-full rounded-2xl border border-white/[0.06] bg-black/40 px-4 py-3 text-white outline-none transition focus:border-cyan-300/40 focus:shadow-[0_0_24px_-6px_rgba(34,211,238,0.4)]"
+                        />
+                      </FieldInput>
+
+                      <FieldInput label="一句话签名 (可选)" hint="展示在身份卡背面的副标题">
+                        <input
+                          value={signature}
+                          onChange={(e) => setSignature(e.target.value)}
+                          placeholder="例如: 把 IDE 与 AI 接通的指挥官"
+                          className="w-full rounded-2xl border border-white/[0.06] bg-black/40 px-4 py-3 text-white outline-none transition focus:border-cyan-300/40 focus:shadow-[0_0_24px_-6px_rgba(34,211,238,0.4)]"
+                        />
+                      </FieldInput>
+                    </div>
+                    <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+                      <p className="text-xs text-white/55">
+                        城市: <span className="text-white">{city.trim() || "未填写"}</span> · 省份: <span className="text-white">{province}</span>
+                      </p>
+                      <PrimaryNav step={step} onPrev={goPrev} onNext={goNext} canNext={canNext} />
+                    </div>
+                  </StepShell>
+                ) : null}
+
+                {step === 4 ? (
+                  <StepShell key="step-4" title="Step 4 · 你的 AI Agent Passport" hint="完成提交后, 卡片将永久写入全国图谱">
+                    <IdentityCardPreview
+                      ref={identityCardRef}
+                      nickname={nickname}
+                      role={role}
+                      level={level}
+                      rarityName={rarityName}
+                      rarityAccent={rarityAccent}
+                      tools={tools}
+                      scenarios={scenarios}
+                      province={province}
+                      city={city}
+                      signature={signature}
+                      avatarSvg={avatarSvg}
+                      identityId={identityId}
+                      signal={signal}
+                    />
+                    <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-white/55">
+                        {submitMessage ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-300/20 bg-cyan-300/[0.06] px-3 py-1.5 text-cyan-200">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> {submitMessage}
+                          </span>
+                        ) : null}
+                        {result?.card_slug ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.06] bg-white/[0.02] px-3 py-1.5 font-mono">
+                            slug: {result.card_slug}
+                          </span>
+                        ) : null}
                       </div>
-                      <div className="space-y-2 rounded-xl border border-white/[0.04] bg-black/20 p-3">
-                        {[
-                          ["地区据点", province + (city ? ` · ${city}` : "")],
-                          ["装备阵列", selectedTools.join("、") || "未选择"],
-                          ["主力装备", primaryTool || selectedTools[0] || "未选择"],
-                          ["使用频率", frequency || "未选择"],
-                          ["使用场景", purpose.length > 0 ? purpose.join("、") : "未选择"],
-                        ].map(([label, value]) => (
-                          <div key={String(label)} className="flex items-start justify-between gap-4 text-sm"><span className="text-white/38">{label}</span><span className="max-w-[65%] text-right font-medium text-white">{value}</span></div>
-                        ))}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button type="button" onClick={regenerateCard} className="btn-lusion-outline !px-4 !py-2.5 !text-[11px]">
+                          <RefreshCw className="h-3.5 w-3.5" /> 重新生成
+                        </button>
+                        <button type="button" onClick={downloadCard} className="btn-lusion-outline !px-4 !py-2.5 !text-[11px]">
+                          <Download className="h-3.5 w-3.5" /> {downloaded ? "已下载 ✓" : "下载身份卡"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSubmit}
+                          disabled={submitStatus === "loading"}
+                          className="btn-lusion !px-5 !py-2.5 !text-[11px] disabled:opacity-60"
+                        >
+                          <Sparkles className="h-3.5 w-3.5" />
+                          {submitStatus === "loading" ? "写入中..." : "提交并点亮地图"}
+                        </button>
                       </div>
                     </div>
-                    {message && status === "error" ? <div className="rounded-2xl border border-red-500/15 bg-red-500/5 px-4 py-3 text-sm text-red-300">{message}</div> : null}
-                  </motion.div>
-                )}
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <button type="button" onClick={copyShare} className="btn-lusion-outline !px-4 !py-2 !text-[11px]">
+                        <Wand2 className="h-3.5 w-3.5" /> {copied === "text" ? "已复制 ✓" : "复制分享文案"}
+                      </button>
+                      <button type="button" onClick={copyLink} className="btn-lusion-outline !px-4 !py-2 !text-[11px]">
+                        <Radio className="h-3.5 w-3.5" /> {copied === "link" ? "已复制 ✓" : "复制卡片链接"}
+                      </button>
+                      <Link href="/map" className="btn-lusion-outline !px-4 !py-2 !text-[11px]">
+                        <MapPin className="h-3.5 w-3.5" /> 查看地图
+                      </Link>
+                      <button type="button" onClick={goPrev} className="btn-lusion-outline !px-4 !py-2 !text-[11px]">
+                        <ArrowLeft className="h-3.5 w-3.5" /> 返回调整
+                      </button>
+                    </div>
+                  </StepShell>
+                ) : null}
               </AnimatePresence>
+            </div>
 
-              <input defaultValue="" onChange={(e) => { honeypotRef.current = e.target.value; }} tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
-              <div className="mt-8 flex flex-col gap-3 border-t border-white/[0.04] pt-6 sm:flex-row sm:items-center sm:justify-between">
-                <div>{!canNext && step < 4 ? <p className="text-sm text-amber-300/88">{nextHint}</p> : <p className="text-sm text-white/38">每一步都会实时更新右侧身份卡预览。</p>}</div>
-                <div className="flex gap-3 self-end sm:self-auto">
-                  <button onClick={() => setStep((prev) => Math.max(1, prev - 1))} disabled={step === 1 || status === "loading"} className="btn-lusion-outline !px-4 !py-3 !text-xs disabled:opacity-40"><ArrowLeft className="h-4 w-4" /> 上一步</button>
-                  {step < 4 ? (
-                    <button onClick={() => canNext && setStep((prev) => Math.min(4, prev + 1))} disabled={!canNext || status === "loading"} className="btn-lusion !px-5 !py-3 !text-xs disabled:opacity-40">下一步 <ArrowRight className="h-4 w-4" /></button>
-                  ) : (
-                    <button onClick={handleSubmit} disabled={status === "loading"} className="btn-lusion !px-5 !py-3 !text-xs disabled:opacity-40">{status === "loading" ? <Sparkles className="h-4 w-4 animate-pulse" /> : <Shield className="h-4 w-4" />}{status === "loading" ? "正在生成身份卡..." : "生成我的 AI Agent Passport"}</button>
-                  )}
-                </div>
-              </div>
-            </LiquidGlassCard>
+            <SidePreview
+              role={role}
+              level={level}
+              rarityName={rarityName}
+              rarityAccent={rarityAccent}
+              tools={tools}
+              scenarios={scenarios}
+              signal={signal}
+              province={province}
+              city={city}
+              avatarSvg={avatarSvg}
+              nickname={nickname}
+            />
           </div>
-
-          <div className="lg:sticky lg:top-28 lg:self-start">
-            <LiquidGlassCard className="overflow-hidden p-0" mode="prominent" blurAmount={0.08} aberrationIntensity={1.8} cornerRadius={30}>
-              <div className="relative overflow-hidden p-5">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(34,211,238,0.12),transparent_28%),radial-gradient(circle_at_82%_18%,rgba(168,85,247,0.14),transparent_30%)]" />
-                <div className="relative">
-                  <div className="mb-5 flex items-center justify-between"><div><p className="title-font text-[10px] uppercase tracking-[0.3em] text-cyan-300/72">Live Preview</p><h3 className="title-font mt-2 text-xl font-black text-white">AI Agent Passport</h3></div><div className="rounded-full border border-white/[0.04] bg-white/[0.015] px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-white/42">L{previewLevel}</div></div>
-                  <div className="relative overflow-hidden rounded-[28px] border border-white/[0.04] bg-[#07080d] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.35)]" style={{ boxShadow: `0 0 36px ${rarityAccent}18` }}>
-                    <div className="absolute inset-0 opacity-25" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
-                    <div className="pointer-events-none absolute inset-0 overflow-hidden"><div className="absolute inset-x-0 h-px animate-scan-line bg-gradient-to-r from-transparent via-cyan-300/60 to-transparent" /></div>
-                    <div className="relative">
-                      <div className="mb-4 flex items-start justify-between gap-3"><div><p className="title-font text-[10px] uppercase tracking-[0.3em] text-white/38">AI AGENT PASSPORT</p><p className="mt-2 text-[11px] uppercase tracking-[0.22em] text-cyan-300/80">Identity verified</p></div><div className="rounded-full border border-white/[0.04] px-3 py-1 text-[10px] font-bold" style={{ color: rarityAccent }}>{rarityName}</div></div>
-                      <div className="mb-4 grid grid-cols-[1fr_auto] items-start gap-3 rounded-2xl border border-white/[0.04] bg-white/[0.015] p-4"><div><p className="text-[10px] uppercase tracking-[0.22em] text-white/35">玩家编号</p><p className="title-font mt-2 text-2xl font-black text-white">#0001024</p><p className="mt-2 text-[11px] text-white/40">{previewTitle}</p></div><div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/[0.04] bg-white/[0.01]" style={{ boxShadow: `0 0 20px ${rarityAccent}18` }}><Cpu className="h-5 w-5" style={{ color: rarityAccent }} /></div></div>
-                      <div className="mb-5 flex justify-center"><div className="relative h-36 w-36 overflow-hidden rounded-[28px] border-2 border-white/[0.04] bg-black/30" dangerouslySetInnerHTML={{ __html: previewAvatar }} /></div>
-                      <div className="mb-4 text-center"><h4 className="title-font text-2xl font-black text-white">{nickname || "Agent_Anonymous"}</h4><p className="mt-2 text-sm font-semibold text-cyan-300">{previewTitle}</p></div>
-                      <div className="mb-4 grid grid-cols-2 gap-3"><div className="rounded-2xl border border-white/[0.04] bg-white/[0.015] p-3 text-center"><p className="mb-1 text-[10px] uppercase tracking-[0.22em] text-white/30">战斗力</p><p className="title-font text-lg font-black text-white">{battlePower.toLocaleString()}</p></div><div className="rounded-2xl border border-white/[0.04] bg-white/[0.015] p-3 text-center"><p className="mb-1 text-[10px] uppercase tracking-[0.22em] text-white/30">地区</p><p className="text-sm font-semibold text-white">{province}{city ? ` · ${city}` : ""}</p></div></div>
-                      <div className="rounded-2xl border border-white/[0.04] bg-white/[0.015] p-4"><div className="mb-2 flex items-center gap-2 text-[10px] uppercase tracking-[0.22em] text-white/35"><Radio className="h-3.5 w-3.5 text-cyan-300/75" /> 主力工具</div><div className="flex flex-wrap gap-2">{(selectedTools.length > 0 ? selectedTools : [userType === "agent" ? "Codex" : "DeepSeek"]).slice(0, 4).map((tool) => <span key={tool} className="rounded-full border px-3 py-1.5 text-[11px] font-medium" style={{ borderColor: `${rarityAccent}33`, color: rarityAccent, background: `${rarityAccent}12` }}>{tool}</span>)}</div></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </LiquidGlassCard>
-          </div>
-        </div>
-      </PageShell>
+        </PageShell>
+      </Section>
     </main>
   );
 }
 
-function FieldCard({ label, children }: { label: string; children: React.ReactNode }) {
-  return <div className="rounded-[24px] border border-white/[0.04] bg-white/[0.015] p-4"><label className="mb-3 block text-xs font-medium uppercase tracking-[0.2em] text-white/35">{label}</label>{children}</div>;
+function StepProgress({ step }: { step: Step }) {
+  return (
+    <div className="relative overflow-hidden rounded-[24px] border border-white/[0.08] bg-black/30 p-5">
+      <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/60 to-transparent" />
+      <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-cyan-300/85">Progress · 4 Steps</p>
+      <h2 className="mt-2 title-font text-lg font-black text-white">角色创建器</h2>
+      <ol className="mt-5 space-y-3">
+        {STEPS.map((entry) => {
+          const active = step === entry.key;
+          const done = step > entry.key;
+          return (
+            <li
+              key={entry.key}
+              className={
+                "relative flex items-center gap-3 rounded-2xl border px-3 py-2.5 transition " +
+                (active
+                  ? "border-cyan-300/30 bg-cyan-300/[0.06]"
+                  : done
+                    ? "border-emerald-400/20 bg-emerald-400/[0.04]"
+                    : "border-white/[0.05] bg-white/[0.015]")
+              }
+            >
+              <span
+                className={
+                  "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border text-sm font-black " +
+                  (active
+                    ? "border-cyan-300/40 bg-black/40 text-cyan-200"
+                    : done
+                      ? "border-emerald-300/30 bg-black/40 text-emerald-200"
+                      : "border-white/[0.06] bg-black/30 text-white/55")
+                }
+              >
+                {done ? <Check className="h-4 w-4" /> : entry.key}
+              </span>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-white">{entry.label}</p>
+                <p className="truncate text-[10px] uppercase tracking-[0.22em] text-white/40">{entry.desc}</p>
+              </div>
+              <ChevronRight className="ml-auto h-4 w-4 text-white/35" aria-hidden />
+            </li>
+          );
+        })}
+      </ol>
+      <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/[0.04]">
+        <motion.span
+          className="block h-full rounded-full bg-gradient-to-r from-cyan-300 via-violet-400 to-pink-300"
+          initial={false}
+          animate={{ width: ((step / STEPS.length) * 100) + "%" }}
+          transition={{ type: "spring", stiffness: 200, damping: 26 }}
+        />
+      </div>
+    </div>
+  );
 }
 
-function QuickChip({ label, onClick }: { label: string; onClick: () => void }) {
-  return <button type="button" onClick={onClick} className="rounded-full border border-white/[0.04] bg-white/[0.015] px-3 py-1.5 text-[11px] text-white/55 transition-colors hover:text-white">{label}</button>;
+function StepShell({ title, hint, children }: { title: string; hint: string; children: React.ReactNode }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -16 }}
+      transition={{ duration: 0.3 }}
+    >
+      <div className="mb-5 flex flex-col gap-1">
+        <h2 className="title-font text-xl font-black text-white sm:text-2xl">{title}</h2>
+        <p className="text-xs text-white/45">{hint}</p>
+      </div>
+      {children}
+    </motion.div>
+  );
 }
+
+function SelectableCard({
+  active,
+  accent,
+  label,
+  description,
+  onClick,
+  category,
+}: {
+  active: boolean;
+  accent: string;
+  label: string;
+  description: string;
+  onClick: () => void;
+  category: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={
+        "group relative flex h-full flex-col gap-2 rounded-2xl border p-4 text-left transition " +
+        (active
+          ? "border-transparent bg-white/[0.04]"
+          : "border-white/[0.06] bg-white/[0.015] hover:border-white/[0.12] hover:bg-white/[0.025]")
+      }
+      style={
+        active
+          ? {
+              borderColor: accent,
+              boxShadow: "0 0 24px -6px " + accent + ", inset 0 1px 0 rgba(255,255,255,0.06)",
+              transform: "translateY(-1px)",
+            }
+          : undefined
+      }
+    >
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+        style={active ? undefined : { boxShadow: "0 0 24px -8px " + accent + "55" }}
+      />
+      {active ? (
+        <span
+          aria-hidden
+          className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black text-black"
+          style={{ background: accent, boxShadow: "0 0 14px " + accent }}
+        >
+          <Check className="h-3 w-3" strokeWidth={3} />
+        </span>
+      ) : null}
+      <div className="flex items-center justify-between">
+        <span
+          className="text-[10px] font-semibold uppercase tracking-[0.22em]"
+          style={{ color: active ? accent : "rgba(255,255,255,0.4)" }}
+        >
+          {category}
+        </span>
+        <span
+          className="h-1.5 w-1.5 rounded-full"
+          style={{ background: accent, boxShadow: "0 0 6px " + accent }}
+        />
+      </div>
+      <p className="text-base font-black text-white">{label}</p>
+      <p className="text-xs leading-5 text-white/45">{description}</p>
+    </button>
+  );
+}
+
+function FieldInput({ label, hint, children }: { label: string; hint: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-1 flex items-center justify-between text-[10px] uppercase tracking-[0.24em] text-white/45">
+        <span>{label}</span>
+        <span className="text-white/30">{hint}</span>
+      </span>
+      {children}
+    </label>
+  );
+}
+
+function PrimaryNav({
+  step,
+  onPrev,
+  onNext,
+  canNext,
+}: {
+  step: Step;
+  onPrev: () => void;
+  onNext: () => void;
+  canNext: boolean;
+}) {
+  if (step === 4) return null;
+  return (
+    <div className="flex items-center gap-2">
+      {step > 1 ? (
+        <button type="button" onClick={onPrev} className="btn-lusion-outline !px-4 !py-2.5 !text-[11px]">
+          <ArrowLeft className="h-3.5 w-3.5" /> 上一步
+        </button>
+      ) : null}
+      <button
+        type="button"
+        onClick={onNext}
+        disabled={!canNext}
+        className="btn-lusion !px-5 !py-2.5 !text-[11px] disabled:opacity-50"
+      >
+        下一步 <ArrowRight className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
+
+function categoryLabel(category: string): string {
+  switch (category) {
+    case "agent": return "编程 Agent";
+    case "app": return "通用 AI";
+    case "automation": return "自动化";
+    case "local": return "本地模型";
+    default: return "装备";
+  }
+}
+
+function SidePreview({
+  role,
+  level,
+  rarityName,
+  rarityAccent,
+  tools,
+  scenarios,
+  signal,
+  province,
+  city,
+  avatarSvg,
+  nickname,
+}: {
+  role: ReturnType<typeof deriveRole>;
+  level: number;
+  rarityName: string;
+  rarityAccent: string;
+  tools: string[];
+  scenarios: string[];
+  signal: number;
+  province: string;
+  city: string;
+  avatarSvg: string;
+  nickname: string;
+}) {
+  const scenarioNames = SURVEY_SCENARIOS.filter((s) => scenarios.includes(s.id)).map((s) => s.name);
+  return (
+    <aside className="overflow-hidden rounded-[28px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.01))] p-5 backdrop-blur-xl sm:p-6">
+      <div className="mb-4 flex items-center gap-2 text-cyan-300">
+        <Cpu className="h-4 w-4" />
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-cyan-300/85">Live Preview</p>
+          <h3 className="title-font text-lg font-black text-white">实时档案</h3>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <PreviewStat label="等级" value={"Lv. " + String(level).padStart(2, "0")} tone={rarityAccent} />
+        <PreviewStat label="稀有度" value={rarityName} tone={rarityAccent} />
+        <PreviewStat label="信号强度" value={signal.toLocaleString()} tone="#22d3ee" />
+        <PreviewStat label="角色" value={role.title} tone={role.tone} />
+      </div>
+
+      <div className="mt-5 rounded-2xl border border-white/[0.05] bg-black/30 p-4">
+        <p className="text-[10px] uppercase tracking-[0.24em] text-white/40">头像预览</p>
+        <div className="mt-3 flex justify-center">
+          <div className="h-28 w-28 overflow-hidden rounded-2xl border border-white/[0.06] bg-black/30" dangerouslySetInnerHTML={{ __html: avatarSvg }} />
+        </div>
+        <p className="mt-3 text-center text-sm font-semibold text-white">{nickname || "匿名 Agent"}</p>
+        <p className="text-center text-[11px] text-white/45">{province}{city ? " · " + city : ""}</p>
+      </div>
+
+      <div className="mt-4 rounded-2xl border border-white/[0.05] bg-black/30 p-4">
+        <p className="text-[10px] uppercase tracking-[0.24em] text-white/40">已选装备</p>
+        {tools.length === 0 ? (
+          <p className="mt-2 text-xs text-white/45">尚未选择</p>
+        ) : (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {tools.map((name) => (
+              <span
+                key={name}
+                className="rounded-full border px-2.5 py-1 text-[11px] font-medium"
+                style={{ color: toolColor(name), borderColor: toolColor(name) + "55", background: toolColor(name) + "1a" }}
+              >
+                {name}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-4 rounded-2xl border border-white/[0.05] bg-black/30 p-4">
+        <p className="text-[10px] uppercase tracking-[0.24em] text-white/40">作战场景</p>
+        {scenarioNames.length === 0 ? (
+          <p className="mt-2 text-xs text-white/45">尚未选择</p>
+        ) : (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {scenarioNames.map((name) => (
+              <span key={name} className="rounded-full border border-white/[0.06] bg-white/[0.02] px-2.5 py-1 text-[11px] text-white/72">
+                {name}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    </aside>
+  );
+}
+
+function PreviewStat({ label, value, tone }: { label: string; value: string; tone: string }) {
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-white/[0.05] bg-black/30 p-3">
+      <span aria-hidden className="absolute inset-x-0 top-0 h-px" style={{ background: "linear-gradient(90deg, transparent, " + tone + ", transparent)" }} />
+      <p className="text-[10px] uppercase tracking-[0.22em] text-white/40">{label}</p>
+      <p className="mt-1 truncate text-sm font-black" style={{ color: tone }}>{value}</p>
+    </div>
+  );
+}
+
+type PreviewRole = ReturnType<typeof deriveRole>;
+
+const IdentityCardPreview = forwardRef<HTMLDivElement, IdentityCardPreviewProps>(({
+  nickname,
+  role,
+  level,
+  rarityName,
+  rarityAccent,
+  tools,
+  scenarios,
+  province,
+  city,
+  signature,
+  avatarSvg,
+  identityId,
+  signal,
+}, ref) => {
+  const scenarioNames = SURVEY_SCENARIOS.filter((s) => scenarios.includes(s.id)).map((s) => s.name);
+  const primaryTool = tools[0];
+  const provinceText = city ? province + " · " + city : province;
+  return (
+    <div
+      ref={ref}
+      className="relative overflow-hidden rounded-[28px] border border-white/[0.08] p-6 sm:p-8"
+      style={{
+        background: "linear-gradient(135deg, rgba(34,211,238,0.10), rgba(168,85,247,0.10), rgba(236,72,153,0.10))",
+        boxShadow: "0 28px 90px rgba(0,0,0,0.32), 0 0 60px " + rarityAccent + "22",
+      }}
+    >
+      <div aria-hidden className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:32px_32px] opacity-40" />
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute inset-x-0 h-px animate-scan-line bg-gradient-to-r from-transparent via-cyan-300/60 to-transparent" />
+      </div>
+      <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-200/60 to-transparent" />
+      <div aria-hidden className="absolute -right-12 -top-12 h-40 w-40 rounded-full blur-3xl" style={{ background: rarityAccent + "22" }} />
+      <div aria-hidden className="absolute -left-12 -bottom-12 h-40 w-40 rounded-full blur-3xl" style={{ background: "rgba(34,211,238,0.18)" }} />
+
+      <div className="relative">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-cyan-300/85">AI Agent Passport</p>
+            <p className="mt-1 text-[11px] uppercase tracking-[0.22em] text-white/55">Identity verified · {rarityName}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="rounded-full border px-2.5 py-0.5 text-[10px] font-bold" style={{ color: rarityAccent, borderColor: rarityAccent + "55", background: rarityAccent + "12" }}>
+              Lv. {String(level).padStart(2, "0")}
+            </span>
+            <span className="rounded-full border border-white/[0.06] bg-black/30 px-2.5 py-0.5 font-mono text-[10px] text-white/65">
+              {identityId}
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-[1fr_auto] md:items-center">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.24em] text-white/40">玩家</p>
+            <h3 className="title-font mt-1 text-3xl font-black text-white sm:text-4xl">{nickname.trim() || "匿名 Agent"}</h3>
+            <p className="mt-2 text-sm font-semibold" style={{ color: role.tone }}>{role.title}</p>
+            {signature.trim() ? <p className="mt-2 text-sm text-white/55">「{signature}」</p> : null}
+            <p className="mt-3 inline-flex items-center gap-2 text-xs text-white/55">
+              <MapPin className="h-3.5 w-3.5 text-cyan-300" /> {provinceText}
+            </p>
+          </div>
+          <div className="flex justify-center md:justify-end">
+            <div
+              className="relative h-32 w-32 overflow-hidden rounded-[24px] border-2 border-white/[0.06] bg-black/30"
+              style={{ boxShadow: "0 0 32px " + rarityAccent + "55" }}
+              dangerouslySetInnerHTML={{ __html: avatarSvg }}
+            />
+          </div>
+        </div>
+
+        <div className="mt-6 grid grid-cols-3 gap-3 text-center">
+          <div className="rounded-2xl border border-white/[0.05] bg-black/30 p-3">
+            <p className="text-[10px] uppercase tracking-[0.22em] text-white/40">装备</p>
+            <p className="title-font mt-1 text-xl font-black text-white">{tools.length}</p>
+          </div>
+          <div className="rounded-2xl border border-white/[0.05] bg-black/30 p-3">
+            <p className="text-[10px] uppercase tracking-[0.22em] text-white/40">场景</p>
+            <p className="title-font mt-1 text-xl font-black text-white">{scenarioNames.length}</p>
+          </div>
+          <div className="rounded-2xl border border-white/[0.05] bg-black/30 p-3">
+            <p className="text-[10px] uppercase tracking-[0.22em] text-white/40">信号</p>
+            <p className="title-font mt-1 text-xl font-black" style={{ color: rarityAccent }}>{signal.toLocaleString()}</p>
+          </div>
+        </div>
+
+        <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div className="rounded-2xl border border-white/[0.05] bg-black/30 p-4">
+            <p className="text-[10px] uppercase tracking-[0.22em] text-white/40">主力工具</p>
+            {tools.length === 0 ? (
+              <p className="mt-2 text-sm text-white/45">尚未选择</p>
+            ) : (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {tools.slice(0, 4).map((name) => (
+                  <span
+                    key={name}
+                    className="rounded-full border px-2.5 py-1 text-[11px] font-medium"
+                    style={{ color: toolColor(name), borderColor: toolColor(name) + "55", background: toolColor(name) + "1a" }}
+                  >
+                    {name}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="rounded-2xl border border-white/[0.05] bg-black/30 p-4">
+            <p className="text-[10px] uppercase tracking-[0.22em] text-white/40">主用场景</p>
+            {scenarioNames.length === 0 ? (
+              <p className="mt-2 text-sm text-white/45">尚未选择</p>
+            ) : (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {scenarioNames.slice(0, 3).map((name) => (
+                  <span key={name} className="rounded-full border border-white/[0.06] bg-white/[0.02] px-2.5 py-1 text-[11px] text-white/72">
+                    {name}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-2 text-[10px] uppercase tracking-[0.24em] text-white/40">
+          <span>AI Agent Map</span>
+          <span>Primary: {primaryTool ?? "未装配"}</span>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+IdentityCardPreview.displayName = "IdentityCardPreview";
+
+type IdentityCardPreviewProps = {
+  nickname: string;
+  role: PreviewRole;
+  level: number;
+  rarityName: string;
+  rarityAccent: string;
+  tools: string[];
+  scenarios: string[];
+  province: string;
+  city: string;
+  signature: string;
+  avatarSvg: string;
+  identityId: string;
+  signal: number;
+};
