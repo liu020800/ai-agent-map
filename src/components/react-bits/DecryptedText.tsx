@@ -103,7 +103,7 @@ export default function DecryptedText({
           pointerRef.current++;
           return next;
         });
-        setDisplayText(prev => {
+        setDisplayText(() => {
           const revealed = new Set(revealedIndices);
           orderRef.current.slice(0, pointerRef.current).forEach(i => revealed.add(i));
           return shuffleText(text, revealed);
@@ -150,6 +150,7 @@ export default function DecryptedText({
 
   // Initial state for click mode
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- Reset state when animate mode or text prop changes. */
     if (animateOn === "click") {
       setDisplayText(shuffleText(text, new Set()));
       setIsDecrypted(false);
@@ -159,6 +160,7 @@ export default function DecryptedText({
     }
     setRevealedIndices(new Set());
     setHasAnimated(false);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [animateOn, text, shuffleText]);
 
   const eventProps = animateOn === "hover"

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useMemo, useEffect } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { Stars } from "@react-three/drei";
 import * as THREE from "three";
 
@@ -67,10 +67,15 @@ function FloatingDots() {
   const ref = useRef<THREE.Points>(null);
   const positions = useMemo(() => {
     const p = new Float32Array(300 * 3);
+    const seed = 12345;
+    const rand = (i: number) => {
+      const x = Math.sin(i * seed) * 10000;
+      return x - Math.floor(x);
+    };
     for (let i = 0; i < 300; i++) {
-      p[i * 3] = (Math.random() - 0.5) * 35;
-      p[i * 3 + 1] = (Math.random() - 0.5) * 35;
-      p[i * 3 + 2] = (Math.random() - 0.5) * 35;
+      p[i * 3] = (rand(i * 3) - 0.5) * 35;
+      p[i * 3 + 1] = (rand(i * 3 + 1) - 0.5) * 35;
+      p[i * 3 + 2] = (rand(i * 3 + 2) - 0.5) * 35;
     }
     return p;
   }, []);

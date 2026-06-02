@@ -11,13 +11,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-CN" className="scroll-smooth">
-      <head>
-        <link
-          href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Inter:wght@400;500;600&display=swap"
-          rel="stylesheet"
-        />
-      </head>
-      <body className="bg-black text-white overflow-x-hidden">
+      <body className="text-white overflow-x-hidden">
         <ClientShell>{children}</ClientShell>
       </body>
     </html>

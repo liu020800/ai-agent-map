@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 
 // Major city coordinates (mapped to SVG viewBox 0-100)
 const CITIES = [
@@ -44,7 +43,10 @@ export default function ChinaSvgMap({ data }: { data?: Array<{ name: string; val
   const [hovered, setHovered] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
 
   const getDataValue = (name: string) => data?.find(d => d.name === name)?.value ?? 0;
 
@@ -60,11 +62,8 @@ export default function ChinaSvgMap({ data }: { data?: Array<{ name: string; val
       <div className="absolute inset-0 bg-gradient-to-b from-[#00ffc8]/[0.02] via-transparent to-purple-500/[0.02] rounded-2xl" />
 
       <svg viewBox="0 0 100 90" className="w-full h-full" fill="none">
-        {/* Grid underlay */}
+        {/* Glow + filters */}
         <defs>
-          <pattern id="mapGrid" width="5" height="5" patternUnits="userSpaceOnUse">
-            <path d="M 5 0 L 0 0 0 5" fill="none" stroke="rgba(0,255,200,0.03)" strokeWidth="0.1" />
-          </pattern>
           <radialGradient id="cityGlow" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="#00ffc8" stopOpacity="0.6" />
             <stop offset="100%" stopColor="#00ffc8" stopOpacity="0" />
@@ -74,8 +73,6 @@ export default function ChinaSvgMap({ data }: { data?: Array<{ name: string; val
             <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
         </defs>
-
-        <rect width="100" height="90" fill="url(#mapGrid)" />
 
         {/* Connection lines */}
         {mounted && CONNECTIONS.map(([a, b], i) => {
@@ -100,8 +97,8 @@ export default function ChinaSvgMap({ data }: { data?: Array<{ name: string; val
             <g key={city.name} onMouseEnter={() => setHovered(city.name)} onMouseLeave={() => setHovered(null)} style={{ cursor: "pointer" }}>
               {/* Outer glow pulse */}
               <circle cx={city.x} cy={city.y} r={glow} fill="url(#cityGlow)" opacity="0">
-                <animate attributeName="r" values={`${glow * 0.6};${glow * 1.2};${glow * 0.6}`} dur={`${2.5 + Math.random() * 2}s`} repeatCount="indefinite" />
-                <animate attributeName="opacity" values="0.3;0.7;0.3" dur={`${2.5 + Math.random() * 2}s`} repeatCount="indefinite" />
+                <animate attributeName="r" values={`${glow * 0.6};${glow * 1.2};${glow * 0.6}`} dur={`${2.5 + ((city.x + city.y) % 20) / 10}s`} repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.3;0.7;0.3" dur={`${2.5 + ((city.x * 3 + city.y) % 18) / 9}s`} repeatCount="indefinite" />
               </circle>
 
               {/* Pulse ring */}

@@ -72,7 +72,7 @@ export async function onRequestPost(context) {
       card_slug: row.card_slug ?? cardSlug,
       avatar_seed: row.avatar_seed ?? avatarSeed,
     }, 201);
-  } catch (e) {
+  } catch {
     return jsonResponse({ error: "Unexpected server error" }, 500);
   }
 }

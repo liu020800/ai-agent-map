@@ -37,7 +37,7 @@ export async function onRequestGet(context) {
       created_at: card.created_at,
       user_number: userNumber,
     });
-  } catch (e) {
+  } catch {
     return jsonResponse({ error: "Unexpected server error" }, 500);
   }
 }

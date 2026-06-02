@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -6,7 +6,7 @@ import { Home } from "lucide-react";
 
 export default function NotFound() {
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center gap-6 px-6 py-16 text-center">
+    <main id="main-content" className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center gap-6 px-6 py-16 text-center">
       <motion.div
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -30,7 +30,7 @@ export default function NotFound() {
       >
         <Link
           href="/"
-          className="inline-flex items-center gap-2 btn-gradient inline-flex items-center gap-2 px-6 py-3 text-sm"
+          className="btn-lusion-outline inline-flex items-center gap-2 px-6 py-3 text-sm"
         >
           <Home className="h-4 w-4" /> 返回首页
         </Link>

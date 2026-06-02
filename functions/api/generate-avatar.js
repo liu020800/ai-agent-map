@@ -51,7 +51,7 @@ export async function onRequestPost(context) {
     if (!imageUrl) return jsonResponse({ error: "No image generated" }, 500);
 
     return jsonResponse({ url: imageUrl }, 200);
-  } catch (e) {
+  } catch {
     return jsonResponse({ error: "Unexpected error" }, 500);
   }
 }

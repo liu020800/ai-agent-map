@@ -1,49 +1,55 @@
-﻿"use client";
+"use client";
 
+import LocalQrCode from "@/components/local-qr-code";
 import { motion } from "framer-motion";
-import { Shield, Swords, MapPin, Star, Zap } from "lucide-react";
+import { Shield, Swords, MapPin, Star, Radio } from "lucide-react";
+
+const LOADOUT = ["Codex", "Claude Code", "OpenCode"];
 
 export default function AgentPassportPreview() {
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.9, rotateY: -10 }}
-      animate={{ opacity: 1, scale: 1, rotateY: 0 }}
-      transition={{ delay: 0.8, duration: 1, type: "spring" }}
+      initial={{ opacity: 0, scale: 0.92, rotateX: 10, rotateY: -8 }}
+      animate={{ opacity: 1, scale: 1, rotateX: 0, rotateY: 0 }}
+      transition={{ delay: 0.55, duration: 0.95, type: "spring", stiffness: 120, damping: 16 }}
       className="relative"
-      style={{ perspective: "1000px" }}
+      style={{ perspective: "1200px" }}
     >
-      {/* Glow behind card */}
-      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-cyan-500/20 via-purple-500/10 to-pink-500/10 blur-[40px] scale-110" />
+      <div className="absolute inset-0 scale-[1.08] rounded-[30px] bg-[radial-gradient(circle_at_20%_10%,rgba(0,255,200,0.24),transparent_28%),radial-gradient(circle_at_85%_15%,rgba(168,85,247,0.24),transparent_30%),radial-gradient(circle_at_50%_100%,rgba(0,212,255,0.18),transparent_36%)] blur-[48px]" />
 
-      <div className="relative w-[280px] rounded-2xl border border-white/10 bg-[#0a0a0f]/90 backdrop-blur-xl overflow-hidden">
-        {/* Scan line effect */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute w-full h-[2px] bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent animate-scan-line" />
+      <div className="relative overflow-hidden rounded-[28px] border border-white/12 bg-[#08090e]/90 shadow-[0_25px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl">
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.015))]" />
+        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(0,255,200,0.14),transparent_32%),radial-gradient(circle_at_0%_100%,rgba(168,85,247,0.16),transparent_28%)]" />
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute inset-x-0 h-[2px] animate-scan-line bg-gradient-to-r from-transparent via-cyan-400/35 to-transparent" />
+          <div className="absolute inset-y-0 left-[12%] w-px bg-gradient-to-b from-transparent via-white/12 to-transparent" />
+          <div className="absolute inset-y-0 right-[16%] w-px bg-gradient-to-b from-transparent via-white/8 to-transparent" />
         </div>
 
-        {/* Header */}
-        <div className="relative px-5 pt-5 pb-3">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className="h-6 w-6 rounded-md bg-gradient-to-br from-[#00ffc8] to-[#a855f7] flex items-center justify-center">
-                <Shield className="h-3 w-3 text-white" />
+        <div className="relative px-5 pb-5 pt-5">
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <div>
+              <div className="mb-2 flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-gradient-to-br from-[#00ffc8] to-[#8b5cf6] shadow-[0_0_24px_rgba(0,255,200,0.28)]">
+                  <Shield className="h-3.5 w-3.5 text-white" />
+                </div>
+                <span className="text-[10px] font-black tracking-[0.24em] text-[#00ffc8]/85">AI AGENT PASSPORT</span>
               </div>
-              <span className="text-[10px] font-bold tracking-[0.2em] text-[#00ffc8]/80">AI AGENT PASSPORT</span>
+              <p className="text-[10px] uppercase tracking-[0.22em] text-white/28">Identity verified · live signal online</p>
             </div>
-            <span className="text-[9px] font-mono text-neutral-600">#0001024</span>
+            <div className="rounded-full border border-amber-400/25 bg-amber-400/10 px-2.5 py-1 text-[10px] font-black text-amber-300">
+              SSR
+            </div>
           </div>
 
-          {/* Divider */}
-          <div className="h-px bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent" />
-        </div>
+          <div className="mb-4 h-px bg-gradient-to-r from-transparent via-cyan-500/40 to-transparent" />
 
-        {/* Avatar + Info */}
-        <div className="px-5 pb-3">
-          <div className="flex items-center gap-4">
-            {/* Pixel avatar placeholder */}
-            <div className="relative h-16 w-16 flex-shrink-0">
-              <div className="h-full w-full rounded-xl bg-gradient-to-br from-cyan-500/20 to-[#a855f7]/20 border border-white/10 flex items-center justify-center overflow-hidden">
-                <svg width="48" height="48" viewBox="0 0 8 8">
+          <div className="grid grid-cols-[78px_1fr] gap-4">
+            <div className="relative h-[92px] w-[78px] overflow-hidden rounded-[20px] border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015))]">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(0,255,200,0.18),transparent_30%),radial-gradient(circle_at_50%_100%,rgba(168,85,247,0.18),transparent_45%)]" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <svg width="54" height="54" viewBox="0 0 8 8">
                   <rect x="2" y="1" width="4" height="3" fill="#00ffc8" rx="0.5" />
                   <rect x="1" y="4" width="6" height="3" fill="#8b5cf6" rx="0.5" />
                   <rect x="3" y="2" width="0.8" height="0.8" fill="#05060a" />
@@ -51,68 +57,62 @@ export default function AgentPassportPreview() {
                   <rect x="3" y="5" width="2" height="0.5" fill="#05060a" rx="0.2" />
                 </svg>
               </div>
-              {/* Level badge */}
-              <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 border-2 border-[#0a0a0f] flex items-center justify-center">
-                <span className="text-[8px] font-black text-white">4</span>
+              <div className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[#08090e] bg-gradient-to-br from-amber-400 to-orange-500 shadow-[0_0_18px_rgba(251,191,36,0.45)]">
+                <span className="text-[9px] font-black text-white">4</span>
               </div>
             </div>
 
             <div className="min-w-0">
-              <p className="text-sm font-bold text-white truncate">Agent_0x3F</p>
-              <p className="text-[10px] text-[#00ffc8] font-medium">L4 Agent 工作流玩家</p>
-              <div className="mt-1 flex items-center gap-1">
-                <Star className="h-2.5 w-2.5 text-amber-400 fill-amber-400" />
-                <span className="text-[9px] font-bold text-amber-400">SSR</span>
-                <span className="text-[9px] text-neutral-600 ml-1">稀有度</span>
+              <p className="truncate title-font text-lg font-black text-white">Agent_0x3F</p>
+              <p className="mt-1 text-[11px] font-semibold tracking-[0.14em] text-[#00ffc8]">L4 Agent 工作流玩家</p>
+              <div className="mt-2 flex items-center gap-1.5">
+                <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                <span className="text-[10px] font-bold text-amber-300">稀有度 SSR</span>
+              </div>
+              <div className="mt-3 flex items-center gap-2 text-[10px] text-white/38">
+                <Radio className="h-3 w-3 text-[#00ffc8]/70" />
+                <span>全国信号链路已接入</span>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Stats row */}
-        <div className="px-5 pb-3">
-          <div className="grid grid-cols-2 gap-2">
-            <div className="rounded-lg border border-white/5 bg-white/[0.02] p-2 text-center">
-              <p className="text-[8px] text-neutral-600 mb-0.5">战斗力</p>
-              <p className="text-sm font-black text-white">8,721</p>
+          <div className="mt-5 grid grid-cols-2 gap-2.5">
+            <div className="rounded-2xl border border-white/[0.04] bg-white/[0.015] p-3 text-center">
+              <p className="mb-1 text-[9px] uppercase tracking-[0.22em] text-white/28">战斗力</p>
+              <p className="title-font text-base font-black text-white">8,721</p>
             </div>
-            <div className="rounded-lg border border-white/5 bg-white/[0.02] p-2 text-center">
-              <p className="text-[8px] text-neutral-600 mb-0.5">装备数</p>
-              <p className="text-sm font-black text-white">6</p>
+            <div className="rounded-2xl border border-white/[0.04] bg-white/[0.015] p-3 text-center">
+              <p className="mb-1 text-[9px] uppercase tracking-[0.22em] text-white/28">编号</p>
+              <p className="title-font text-base font-black text-white">#0001024</p>
             </div>
           </div>
-        </div>
 
-        {/* Tools */}
-        <div className="px-5 pb-3">
-          <p className="text-[8px] text-neutral-600 mb-1.5 flex items-center gap-1">
-            <Swords className="h-2.5 w-2.5" /> 已装备
-          </p>
-          <div className="flex flex-wrap gap-1">
-            {["Codex", "Claude Code", "OpenCode"].map((tool) => (
-              <span key={tool} className="rounded-md border border-[#00ffc8]/20 bg-cyan-500/5 px-2 py-0.5 text-[9px] font-medium text-[#00ffc8]/80">
-                {tool}
-              </span>
-            ))}
+          <div className="mt-4 rounded-2xl border border-white/[0.04] bg-white/[0.015] p-3.5">
+            <p className="mb-2 flex items-center gap-1.5 text-[9px] uppercase tracking-[0.22em] text-white/32">
+              <Swords className="h-3 w-3 text-[#00ffc8]/70" />
+              主力装备
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {LOADOUT.map((tool) => (
+                <span key={tool} className="rounded-full border border-[#00ffc8]/20 bg-[#00ffc8]/[0.06] px-2.5 py-1 text-[10px] font-medium text-[#00ffc8]/90">
+                  {tool}
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Location */}
-        <div className="px-5 pb-4">
-          <div className="flex items-center gap-1.5 text-[10px] text-neutral-500">
-            <MapPin className="h-2.5 w-2.5" />
-            <span>上海</span>
+          <div className="mt-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-[11px] text-white/55">
+              <MapPin className="h-3.5 w-3.5 text-[#00d4ff]" />
+              <span>上海 · 中国</span>
+            </div>
+            <div className="overflow-hidden rounded-xl border border-white/[0.04] bg-white p-1">
+              <LocalQrCode value="https://liusq.icu/survey" size={36} className="h-9 w-9" />
+            </div>
           </div>
-        </div>
 
-        {/* Footer */}
-        <div className="border-t border-white/5 px-5 py-2.5 flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <Zap className="h-3 w-3 text-[#00ffc8]" />
-            <span className="text-[8px] text-neutral-600">liusq.icu</span>
-          </div>
-          <div className="h-6 w-6 rounded bg-white/5 border border-white/10 flex items-center justify-center">
-            <span className="text-[7px] text-neutral-600">QR</span>
+          <div className="mt-4 rounded-2xl border border-[#00ffc8]/12 bg-[#00ffc8]/[0.04] px-3 py-2.5 text-[10px] uppercase tracking-[0.2em] text-[#00ffc8]/75">
+            liusq.icu · 全民 Agent 身份图谱
           </div>
         </div>
       </div>

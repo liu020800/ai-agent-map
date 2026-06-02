@@ -1,72 +1,60 @@
-﻿"use client";
+"use client";
 
 import { motion } from "framer-motion";
 
-const BADGES = [
-  { name: "Codex", color: "#00ffc8", delay: 0 },
-  { name: "Claude Code", color: "#a78bfa", delay: 0.3 },
-  { name: "OpenCode", color: "#34d399", delay: 0.6 },
-  { name: "DeepSeek", color: "#60a5fa", delay: 0.9 },
-  { name: "豆包", color: "#f472b6", delay: 1.2 },
+type Badge = {
+  name: string;
+  color: string;
+  delay: number;
+  /** Position within the visualRef container, clamped inside the panel. */
+  pos: { top?: string; bottom?: string; left?: string; right?: string };
+};
+
+/**
+ * 4 floating tool badges, all clamped inside the hero visual panel
+ * (no negative offsets, no overflow into the text column). They live
+ * behind the passport preview (z-10) but above the radar background.
+ * Each badge is content-bearing (tool name) and pointer-events-none.
+ */
+const BADGES: Badge[] = [
+  { name: "Codex", color: "#22d3ee", delay: 0, pos: { top: "5%", right: "4%" } },
+  { name: "Claude Code", color: "#a78bfa", delay: 0.3, pos: { top: "44%", right: "2%" } },
+  { name: "OpenCode", color: "#34d399", delay: 0.6, pos: { bottom: "8%", right: "8%" } },
+  { name: "DeepSeek", color: "#60a5fa", delay: 0.9, pos: { top: "8%", left: "3%" } },
 ];
 
 export default function FloatingToolBadges() {
   return (
-    <div className="absolute inset-0 pointer-events-none">
-      {BADGES.map((badge, i) => {
-        const positions = [
-          { top: "8%", left: "-5%" },
-          { top: "2%", right: "-8%" },
-          { bottom: "25%", left: "-12%" },
-          { bottom: "10%", right: "-10%" },
-          { top: "40%", right: "-15%" },
-        ];
-        const pos = positions[i];
-
-        return (
-          <motion.div
-            key={badge.name}
-            className="absolute pointer-events-auto"
-            style={pos}
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{
-              opacity: 1,
-              scale: 1,
-              y: [0, -6, 0],
-            }}
-            transition={{
-              opacity: { delay: 1.5 + badge.delay, duration: 0.5 },
-              scale: { delay: 1.5 + badge.delay, duration: 0.5 },
-              y: {
-                delay: 2 + badge.delay,
-                duration: 3 + i * 0.5,
-                repeat: Infinity,
-                ease: "easeInOut",
-              },
+    <div aria-hidden className="pointer-events-none absolute inset-0 z-10 hidden lg:block">
+      {BADGES.map((badge, i) => (
+        <motion.div
+          key={badge.name}
+          className="absolute"
+          style={badge.pos}
+          initial={{ opacity: 0, scale: 0.6, y: 12 }}
+          animate={{ opacity: 1, scale: 1, y: [0, -6, 0] }}
+          transition={{
+            opacity: { delay: 1.4 + badge.delay, duration: 0.5 },
+            scale: { delay: 1.4 + badge.delay, duration: 0.5 },
+            y: { delay: 1.8 + badge.delay, duration: 3.4 + i * 0.4, repeat: Infinity, ease: "easeInOut" },
+          }}
+        >
+          <div
+            className="relative flex items-center gap-2 rounded-full border px-3 py-1.5 backdrop-blur-xl"
+            style={{
+              borderColor: `${badge.color}32`,
+              background: `linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03)), ${badge.color}10`,
+              boxShadow: `0 0 20px ${badge.color}18`,
             }}
           >
-            <div
-              className="flex items-center gap-1.5 rounded-full border px-3 py-1.5 backdrop-blur-sm"
-              style={{
-                borderColor: `${badge.color}30`,
-                background: `${badge.color}08`,
-                boxShadow: `0 0 12px ${badge.color}15`,
-              }}
-            >
-              <div
-                className="h-1.5 w-1.5 rounded-full"
-                style={{ background: badge.color }}
-              />
-              <span
-                className="text-[10px] font-semibold whitespace-nowrap"
-                style={{ color: badge.color }}
-              >
-                {badge.name}
-              </span>
-            </div>
-          </motion.div>
-        );
-      })}
+            <span className="absolute inset-0 rounded-full bg-[linear-gradient(135deg,transparent,rgba(255,255,255,.12),transparent)] opacity-80" />
+            <div className="relative h-1.5 w-1.5 rounded-full" style={{ background: badge.color, boxShadow: `0 0 10px ${badge.color}` }} />
+            <span className="relative whitespace-nowrap text-[10px] font-semibold tracking-[0.12em]" style={{ color: badge.color }}>
+              {badge.name}
+            </span>
+          </div>
+        </motion.div>
+      ))}
     </div>
   );
 }
