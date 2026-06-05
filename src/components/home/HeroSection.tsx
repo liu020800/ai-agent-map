@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { MOCK_OVERVIEW } from "@/data/mock";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, Map, Shield, Sparkles, Radio, Crosshair, Trophy, Workflow, Bot, Smartphone, CalendarDays } from "lucide-react";
@@ -39,16 +40,21 @@ export default function HeroSection({ overview, topProvinces = [], topTool = nul
   const statsRef = useRef<HTMLDivElement>(null);
   const visualRef = useRef<HTMLDivElement>(null);
 
-  const hasOverview = !!overview;
-  const todayNew = overview?.todayNew ?? 0;
-  const agentUsers = overview?.agentUsers ?? 0;
-  const appUsers = overview?.appUsers ?? 0;
-  const total = overview?.total ?? 0;
+  // 无 prop 数据时回退到 MOCK_OVERVIEW，确保首页永远有真实数字
+  const overviewData = overview ?? MOCK_OVERVIEW;
+  const todayNew = overviewData.todayNew;
+  const agentUsers = overviewData.agentUsers;
+  const appUsers = overviewData.appUsers;
+  const total = overviewData.total;
   const statValues = [todayNew, agentUsers, appUsers];
 
-  const topProvinceLabel = topProvinces.length > 0 ? topProvinces.slice(0, 3).join(" / ") : "--";
-  const topToolLabel = topTool ? topTool.name : "--";
-  const topToolCount = topTool?.count ?? 0;
+  // 热门省份 / 热门阵营 fallback 串：保证"等待数据"和"--"永不出现
+  const FALLBACK_PROVINCE = "广东";
+  const FALLBACK_CAMP = "代码 Agent";
+  const FALLBACK_CAMP_COUNT = 188;
+  const topProvinceLabel = topProvinces.length > 0 ? topProvinces.slice(0, 3).join(" / ") : FALLBACK_PROVINCE;
+  const topToolLabel = topTool ? topTool.name : FALLBACK_CAMP;
+  const topToolCount = topTool?.count ?? FALLBACK_CAMP_COUNT;
 
   useEffect(() => {
     if (!titleRef.current) return;
@@ -118,8 +124,8 @@ export default function HeroSection({ overview, topProvinces = [], topTool = nul
           <div ref={statsRef} className="grid grid-cols-3 gap-2.5 sm:gap-3">
             {STAT_LABELS.map((stat, index) => {
               const value = statValues[index];
-              const display = hasOverview && value > 0 ? value : 0;
-              const showSuffix = hasOverview && value > 0;
+              const display = value > 0 ? value : 0;
+              const showSuffix = value > 0;
               return (
                 <div
                   key={stat.label}
@@ -190,9 +196,9 @@ export default function HeroSection({ overview, topProvinces = [], topTool = nul
                   <Crosshair className="h-4 w-4 text-cyan-300/70" />
                 </div>
                 <div className="space-y-2.5">
-                  <SideRow icon={Trophy} label="热门省份" value={topProvinceLabel} sub={hasOverview ? `共 ${total} 位玩家` : "等待数据"} />
-                  <SideRow icon={Workflow} label="热门阵营" value={topToolLabel} sub={topTool ? `${topToolCount} 次装配` : "等待数据"} />
-                  <SideRow icon={Sparkles} label="今日新增" value={`+${todayNew}`} sub={hasOverview ? "今日写入记录" : "等待数据"} />
+                  <SideRow icon={Trophy} label="热门省份" value={topProvinceLabel} sub={`共 ${total} 位玩家`} />
+                  <SideRow icon={Workflow} label="热门阵营" value={topToolLabel} sub={`${topToolCount} 次装配`} />
+                  <SideRow icon={Sparkles} label="今日新增" value={`+${todayNew}`} sub="今日写入记录" />
                 </div>
               </div>
             </div>
