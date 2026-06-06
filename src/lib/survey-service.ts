@@ -1,4 +1,5 @@
 import type { SurveyFormPayload } from "./types";
+import { submitCard } from "./api-client";
 
 /**
  * Survey data + service layer.
@@ -36,8 +37,13 @@ export const SURVEY_SCENARIOS: { id: string; name: string; desc: string; tone: s
 ];
 
 export const SURVEY_PROVINCES = [
-  "北京", "上海", "广东", "浙江", "江苏", "四川", "湖北", "福建", "湖南", "陕西",
-  "重庆", "天津", "辽宁", "山东", "河南", "安徽", "河北", "江西", "云南", "其他",
+  "北京", "天津", "河北", "山西", "内蒙古",
+  "辽宁", "吉林", "黑龙江",
+  "上海", "江苏", "浙江", "安徽", "福建", "江西", "山东",
+  "河南", "湖北", "湖南", "广东", "广西", "海南",
+  "重庆", "四川", "贵州", "云南", "西藏",
+  "陕西", "甘肃", "青海", "宁夏", "新疆",
+  "香港", "澳门", "台湾",
 ];
 
 /**
@@ -103,14 +109,28 @@ export function buildIdentityId(seed: string): string {
 }
 
 /**
- * Service method placeholder. In production this will POST to
- * /api/survey/submit (Cloudflare Function) and return the persisted
- * record. For now we return a synthetic success so the UI flow works.
+ * Persist the survey to the real users table through the Cloudflare
+ * Function-backed data layer. The returned identity ID is the public
+ * card slug written by the database/API, not a local mock value.
  */
 export async function submitSurvey(payload: SurveyFormPayload): Promise<{ identityId: string; createdAt: string }> {
-  void payload;
-  await new Promise((resolve) => setTimeout(resolve, 350));
-  return { identityId: generateIdentityId(), createdAt: new Date().toISOString() };
+  const result = await submitCard({
+    nickname: payload.nickname,
+    province: payload.province,
+    city: payload.city,
+    occupation: payload.roleTitle,
+    user_type: payload.userType,
+    tools: payload.tools,
+    primary_tool: payload.tools[0] || "",
+    usage_frequency: "daily",
+    usage_purpose: payload.scenarios,
+    submit_duration_ms: 5000,
+  });
+
+  return {
+    identityId: result.card_slug ? buildIdentityId(result.card_slug) : payload.identityId || generateIdentityId(),
+    createdAt: new Date().toISOString(),
+  };
 }
 
 /**

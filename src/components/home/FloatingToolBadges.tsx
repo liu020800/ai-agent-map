@@ -6,26 +6,19 @@ type Badge = {
   name: string;
   color: string;
   delay: number;
-  /** Position within the visualRef container, clamped inside the panel. */
   pos: { top?: string; bottom?: string; left?: string; right?: string };
 };
 
-/**
- * 4 floating tool badges, all clamped inside the hero visual panel
- * (no negative offsets, no overflow into the text column). They live
- * behind the passport preview (z-10) but above the radar background.
- * Each badge is content-bearing (tool name) and pointer-events-none.
- */
 const BADGES: Badge[] = [
-  { name: "Codex", color: "#22d3ee", delay: 0, pos: { top: "5%", right: "4%" } },
-  { name: "Claude Code", color: "#a78bfa", delay: 0.3, pos: { top: "44%", right: "2%" } },
-  { name: "OpenCode", color: "#34d399", delay: 0.6, pos: { bottom: "8%", right: "8%" } },
-  { name: "DeepSeek", color: "#60a5fa", delay: 0.9, pos: { top: "8%", left: "3%" } },
+  { name: "Codex", color: "#22d3ee", delay: 0, pos: { top: "-4%", right: "-2%" } },
+  { name: "Claude Code", color: "#a78bfa", delay: 0.3, pos: { top: "44%", right: "-6%" } },
+  { name: "OpenCode", color: "#34d399", delay: 0.6, pos: { bottom: "-2%", right: "4%" } },
+  { name: "DeepSeek", color: "#60a5fa", delay: 0.9, pos: { top: "-2%", left: "-4%" } },
 ];
 
 export default function FloatingToolBadges() {
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 z-10 hidden lg:block">
+    <div aria-hidden className="pointer-events-none absolute inset-0 z-30 hidden lg:block">
       {BADGES.map((badge, i) => (
         <motion.div
           key={badge.name}

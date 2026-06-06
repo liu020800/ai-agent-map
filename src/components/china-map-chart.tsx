@@ -55,13 +55,21 @@ export default function ChinaMapChart({ data, filter }: MapChartProps) {
   const [mapLoaded, setMapLoaded] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const chartRef = useRef<ReactECharts | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mountedRef = useRef(true);
 
   const loadMap = useCallback(async () => {
+    if (!mountedRef.current) return;
     try {
       setLoadError(false);
-      const res = await fetch("/maps/china.json");
-      if (!res.ok) throw new Error("Failed to load map");
+      // 10-second timeout to avoid stuck loading
+      const controller = new AbortController();
+      timerRef.current = setTimeout(() => controller.abort(), 10000);
+      const res = await fetch("/maps/china.json", { signal: controller.signal });
+      if (timerRef.current) clearTimeout(timerRef.current);
+      if (!res.ok || !mountedRef.current) throw new Error("Failed to load map");
       const json = await res.json();
+      if (!mountedRef.current) return;
       if (json.features) {
         for (const f of json.features) {
           if (f.properties?.name) {
@@ -72,13 +80,18 @@ export default function ChinaMapChart({ data, filter }: MapChartProps) {
       echarts.registerMap("china", json);
       setMapLoaded(true);
     } catch {
+      if (!mountedRef.current) return;
       setLoadError(true);
     }
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    mountedRef.current = true;
     void loadMap();
+    return () => {
+      mountedRef.current = false;
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
   }, [loadMap]);
 
   const dataMap = useMemo(() => {
@@ -186,7 +199,7 @@ export default function ChinaMapChart({ data, filter }: MapChartProps) {
 
   if (loadError) {
     return (
-      <div className="flex h-[480px] flex-col items-center justify-center gap-4 text-slate-400">
+      <div className="flex h-[360px] sm:h-[420px] flex-col items-center justify-center gap-4 text-slate-400">
         <p>地图数据加载失败</p>
         <button onClick={loadMap} className="btn-lusion-outline !px-4 !py-2 !text-[11px]">重试加载</button>
       </div>
@@ -195,11 +208,11 @@ export default function ChinaMapChart({ data, filter }: MapChartProps) {
 
   if (!mapLoaded) {
     return (
-      <div className="flex h-[480px] items-center justify-center">
-        <SciFiLoader text="正在扫描全国 AI 信号..." />
+      <div className="flex h-[360px] sm:h-[420px] items-center justify-center">
+        <SciFiLoader text="信号雷达已就绪，加载地图数据..." />
       </div>
     );
   }
 
-  return <ReactECharts ref={chartRef} style={{ height: 480 }} option={option} notMerge lazyUpdate />;
+  return <ReactECharts ref={chartRef} style={{ height: 420 }} option={option} notMerge lazyUpdate />;
 }

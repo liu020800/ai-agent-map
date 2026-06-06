@@ -12,15 +12,15 @@ export async function onRequestGet(context) {
 
     let rows = [];
     try {
-      let res = await fetch(`${supabaseUrl}/rest/v1/users?select=tools,province,ai_level,created_at,user_type&status=eq.valid&limit=50000`, { headers });
+      let res = await fetch(`${supabaseUrl}/rest/v1/users?select=tools,province,city,occupation,usage_purpose,ai_level,created_at,user_type&status=eq.valid&limit=50000`, { headers });
       if (res.ok) rows = await res.json();
       else {
-        res = await fetch(`${supabaseUrl}/rest/v1/users?select=tools,province,ai_level,created_at,user_type&limit=50000`, { headers });
+        res = await fetch(`${supabaseUrl}/rest/v1/users?select=tools,province,city,occupation,usage_purpose,ai_level,created_at,user_type&limit=50000`, { headers });
         if (res.ok) rows = await res.json();
         else return jsonResponse({ error: await res.text() }, 500);
       }
     } catch {
-      const res = await fetch(`${supabaseUrl}/rest/v1/users?select=tools,province,ai_level,created_at,user_type&limit=50000`, { headers });
+      const res = await fetch(`${supabaseUrl}/rest/v1/users?select=tools,province,city,occupation,usage_purpose,ai_level,created_at,user_type&limit=50000`, { headers });
       if (res.ok) rows = await res.json();
       else return jsonResponse({ error: "failed to fetch" }, 500);
     }
@@ -33,6 +33,8 @@ export async function onRequestGet(context) {
 
     const toolMap = new Map();
     const provinceMap = new Map();
+    const cityMap = new Map();
+    const roleMap = new Map();
     const levelMap = new Map();
     const today = new Date().toISOString().split("T")[0];
     let todayNew = 0;
@@ -41,6 +43,23 @@ export async function onRequestGet(context) {
       const tools = row.tools ?? [];
       for (const tool of tools) toolMap.set(tool, (toolMap.get(tool) ?? 0) + 1);
       if (row.province) provinceMap.set(row.province, (provinceMap.get(row.province) ?? 0) + 1);
+      const role = row.occupation || deriveRoleFromPurpose(row.usage_purpose || []);
+      if (role) {
+        const stat = roleMap.get(role) || { count: 0, toolCounts: new Map() };
+        stat.count += 1;
+        for (const tool of tools) stat.toolCounts.set(tool, (stat.toolCounts.get(tool) || 0) + 1);
+        roleMap.set(role, stat);
+      }
+      if (row.city || row.province) {
+        const city = row.city || row.province || "未知城市";
+        const province = row.province || "未知地区";
+        const key = `${province}-${city}`;
+        const stat = cityMap.get(key) || { city, province, count: 0, toolCounts: new Map(), roleCounts: new Map() };
+        stat.count += 1;
+        for (const tool of tools) stat.toolCounts.set(tool, (stat.toolCounts.get(tool) || 0) + 1);
+        if (role) stat.roleCounts.set(role, (stat.roleCounts.get(role) || 0) + 1);
+        cityMap.set(key, stat);
+      }
       const level = row.ai_level ?? 1;
       levelMap.set(level, (levelMap.get(level) ?? 0) + 1);
       if (row.created_at && row.created_at.startsWith(today)) todayNew++;
@@ -48,7 +67,20 @@ export async function onRequestGet(context) {
 
     const tools = Array.from(toolMap.entries()).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 20);
     const provinces = Array.from(provinceMap.entries()).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+    const cities = Array.from(cityMap.values())
+      .map((entry) => ({
+        city: entry.city,
+        province: entry.province,
+        count: entry.count,
+        topTool: topMapKey(entry.toolCounts) || "未记录",
+        topRole: topMapKey(entry.roleCounts) || "AI 探索者",
+      }))
+      .sort((a, b) => b.count - a.count);
+    const roles = Array.from(roleMap.entries())
+      .map(([role, entry]) => ({ role, count: entry.count, topTool: topMapKey(entry.toolCounts) || "未记录" }))
+      .sort((a, b) => b.count - a.count);
     const levels = Array.from({ length: 5 }, (_, i) => i + 1).map((level) => ({ level, count: levelMap.get(level) ?? 0 }));
+    const timeline = buildTimeline(normalizedRows);
     const total = normalizedRows.length;
     const agentUsers = normalizedRows.filter((row) => row.user_type === "agent").length;
     const appUsers = normalizedRows.filter((row) => row.user_type === "app").length;
@@ -57,7 +89,10 @@ export async function onRequestGet(context) {
       {
         tools,
         provinces,
+        cities,
+        roles,
         levels,
+        timeline,
         overview: { total, agentUsers, appUsers, todayNew },
         filters: { userType: userFilter, tool: selectedTool },
       },
@@ -67,6 +102,37 @@ export async function onRequestGet(context) {
   } catch {
     return jsonResponse({ error: "Unexpected server error" }, 500);
   }
+}
+
+function buildTimeline(rows) {
+  const now = new Date();
+  return Array.from({ length: 7 }, (_, index) => {
+    const day = new Date(now);
+    day.setDate(now.getDate() - (6 - index));
+    const key = day.toISOString().split("T")[0];
+    const signals = rows.filter((row) => typeof row.created_at === "string" && row.created_at.startsWith(key)).length;
+    const active = rows.filter((row) => typeof row.created_at === "string" && row.created_at.slice(0, 10) <= key).length;
+    return {
+      day: day.toLocaleDateString("zh-CN", { weekday: "short" }).replace("星期", "周"),
+      signals,
+      active,
+    };
+  });
+}
+
+function topMapKey(map) {
+  return Array.from(map.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] || "";
+}
+
+function deriveRoleFromPurpose(purpose) {
+  const set = new Set(Array.isArray(purpose) ? purpose : []);
+  if (set.has("code") || set.has("web-dev")) return "代码指挥官";
+  if (set.has("automation") || set.has("nas-docker")) return "自动化玩家";
+  if (set.has("knowledge-base")) return "知识库构建者";
+  if (set.has("local-llm")) return "本地模型驯养师";
+  if (set.has("data-analysis") || set.has("invest")) return "数据分析师";
+  if (set.has("article") || set.has("learning")) return "内容生产者";
+  return "AI 探索者";
 }
 
 function jsonResponse(d, s, h = {}) {

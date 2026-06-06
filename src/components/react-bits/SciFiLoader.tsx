@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { Radar } from "lucide-react";
 
-export default function SciFiLoader({ text = "正在扫描 AI 信号...", className = "" }: { text?: string; className?: string }) {
+export default function SciFiLoader({ text = "雷达已激活，等待信号源...", className = "" }: { text?: string; className?: string }) {
   return (
     <div className={`flex flex-col items-center gap-6 ${className}`}>
       <div className="relative flex h-28 w-28 items-center justify-center">

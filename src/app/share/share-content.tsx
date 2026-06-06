@@ -10,14 +10,13 @@ import {
 } from "lucide-react";
 import CountUp from "@/components/react-bits/CountUp";
 import TiltedCard from "@/components/react-bits/TiltedCard";
-import LiquidGlassCard from "@/components/react-bits/LiquidGlassCard";
 import ShinyText from "@/components/react-bits/ShinyText";
 import { generateAvatarSvg } from "@/lib/avatar";
 import { levelName } from "@/lib/level";
 import { toolColor, MOCK_RECENT_CARDS, MOCK_TOOLS } from "@/data/mock";
 import { getQQShareUrl, getQZoneShareUrl, getWeiboShareUrl, initWxShare } from "@/lib/wechat-share";
 import { fetchCard, generateAiAvatar } from "@/lib/api-client";
-import { buildIdentityId, deriveRole } from "@/lib/survey-service";
+import { SURVEY_PROVINCES, buildIdentityId, deriveRole } from "@/lib/survey-service";
 import { PageShell, Section } from "@/components/ui";
 import ParticlesBG from "@/components/react-bits/ParticlesBG";
 import LocalQrCode from "@/components/local-qr-code";
@@ -39,7 +38,18 @@ type IdentityCard = {
   signalStrength: number;
   signature: string;
   scenarios: string[];
+  generatedCardImageUrl?: string;
+  generatedCardShareText?: string;
 };
+
+function StableSharePanel({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`relative overflow-hidden rounded-2xl border border-cyan-300/14 bg-[linear-gradient(135deg,rgba(15,23,42,0.80),rgba(2,6,23,0.64))] p-5 shadow-[0_0_30px_rgba(34,211,238,0.10)] backdrop-blur-xl ${className}`}>
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.022)_1px,transparent_1px)] bg-[size:28px_28px] opacity-25" />
+      <div className="relative z-10">{children}</div>
+    </div>
+  );
+}
 
 const RARITY: Record<number, { name: string; color: string; border: string; label: string; accent: string; glow: string }> = {
   1: { name: "普通", color: "text-neutral-400", border: "border-neutral-500/30", label: "R", accent: "#737373", glow: "rgba(115,115,115,0.4)" },
@@ -74,14 +84,19 @@ function levelLongName(n: number): string {
 
 const TOOL_POOL = ["Codex", "Claude Code", "OpenCode", "Cursor", "DeepSeek", "豆包", "Kimi", "通义千问", "Dify", "n8n", "Ollama", "Cherry Studio", "Trae", "CodeBuddy"];
 const SCENARIO_POOL = ["写代码", "写文章", "自动化工作流", "数据分析", "网站开发", "知识库问答", "本地模型部署", "NAS / Docker 运维", "投资分析", "学习研究"];
-const PROVINCES = ["北京", "上海", "广东", "浙江", "江苏", "四川", "湖北", "福建", "湖南", "陕西", "重庆", "天津", "辽宁", "山东", "河南", "安徽"];
+const PROVINCES = SURVEY_PROVINCES;
 const CITY_MAP: Record<string, string[]> = {
   "北京": ["北京"], "上海": ["上海"], "广东": ["广州", "深圳", "东莞", "佛山"],
   "浙江": ["杭州", "宁波", "温州", "嘉兴"], "江苏": ["南京", "苏州", "无锡", "常州"],
   "四川": ["成都", "绵阳"], "湖北": ["武汉", "宜昌"], "福建": ["福州", "厦门", "泉州"],
   "湖南": ["长沙", "株洲"], "陕西": ["西安", "咸阳"], "重庆": ["重庆"], "天津": ["天津"],
   "辽宁": ["沈阳", "大连"], "山东": ["济南", "青岛", "烟台"], "河南": ["郑州", "洛阳"],
-  "安徽": ["合肥", "芜湖"]
+  "安徽": ["合肥", "芜湖"], "河北": ["石家庄", "唐山"], "山西": ["太原", "大同"],
+  "内蒙古": ["呼和浩特", "包头"], "吉林": ["长春", "吉林"], "黑龙江": ["哈尔滨", "齐齐哈尔"],
+  "江西": ["南昌", "赣州"], "广西": ["南宁", "桂林"], "海南": ["海口", "三亚"],
+  "贵州": ["贵阳", "遵义"], "云南": ["昆明", "大理"], "西藏": ["拉萨", "日喀则"],
+  "甘肃": ["兰州", "天水"], "青海": ["西宁", "海东"], "宁夏": ["银川", "吴忠"],
+  "新疆": ["乌鲁木齐", "喀什"], "香港": ["香港"], "澳门": ["澳门"], "台湾": ["台北", "高雄"]
 };
 
 function buildFallbackCard(seedStr = "share-default-2026"): IdentityCard {
@@ -194,7 +209,15 @@ function normalizeStoredPassport(raw: unknown): IdentityCard {
       typeof r.signature === "string" && r.signature.trim().length > 0
         ? r.signature
         : fallback.signature,
-    scenarios
+    scenarios,
+    generatedCardImageUrl:
+      typeof r.generatedCardImageUrl === "string" && r.generatedCardImageUrl.length > 0
+        ? r.generatedCardImageUrl
+        : undefined,
+    generatedCardShareText:
+      typeof r.generatedCardShareText === "string" && r.generatedCardShareText.length > 0
+        ? r.generatedCardShareText
+        : undefined,
   };
 }
 
@@ -272,7 +295,7 @@ export default function ShareContent() {
   const displayLevelShort = `Lv.${String(currentLevel).padStart(2, "0")}`;
   const displayLevelLong = levelLongName(currentLevel);
   const displayTool = card.primary_tool;
-  const shareText = buildShareText(card);
+  const shareText = card.generatedCardShareText || buildShareText(card);
   const shareUrl = slug ? `https://liusq.icu/share?slug=${slug}` : "https://liusq.icu/share";
   const passportCode = String(card.user_number).padStart(7, "0");
   const toolAccentColor = toolColor(displayTool);
@@ -316,6 +339,26 @@ export default function ShareContent() {
   }, []);
 
   const handleDownload = useCallback(async () => {
+    if (card.generatedCardImageUrl) {
+      setGenerating(true);
+      try {
+        const response = await fetch(card.generatedCardImageUrl);
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.download = `ai-agent-card-${card.id}.png`;
+        link.href = objectUrl;
+        link.click();
+        URL.revokeObjectURL(objectUrl);
+        setDownloaded(true);
+        setTimeout(() => setDownloaded(false), 2000);
+      } catch {
+        window.open(card.generatedCardImageUrl, "_blank", "noopener");
+      } finally {
+        setGenerating(false);
+      }
+      return;
+    }
     if (!cardRef.current) {
       alert("下载功能准备中，可先截图分享");
       return;
@@ -334,7 +377,7 @@ export default function ShareContent() {
     } finally {
       setGenerating(false);
     }
-  }, [card.id]);
+  }, [card.generatedCardImageUrl, card.id]);
 
   const handleCopyText = useCallback(() => {
     if (typeof navigator === "undefined" || !navigator.clipboard) return;
@@ -377,7 +420,7 @@ export default function ShareContent() {
   const topTools = MOCK_TOOLS.slice(0, 5);
 
   return (
-    <main className="relative min-h-screen overflow-hidden pb-20 pt-10">
+    <main className="relative min-h-screen overflow-hidden pb-16 pt-0">
       <ParticlesBG className="opacity-20" count={20} />
 
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
@@ -386,9 +429,9 @@ export default function ShareContent() {
         <div className="absolute bottom-0 left-1/2 h-[28rem] w-[28rem] -translate-x-1/2 rounded-full bg-[rgba(251,191,36,0.15)] blur-[130px]" />
       </div>
 
-      <Section className="relative z-10" spacing="md">
+      <Section className="relative z-10" spacing="sm">
         <PageShell width="wide">
-          <div className="mb-10 text-center">
+          <div className="mb-8 text-center">
             <div className="mb-5 inline-flex items-center gap-3 rounded-full border border-cyan-300/20 bg-cyan-300/[0.05] px-5 py-2.5 backdrop-blur-xl">
               <Radio className="h-4 w-4 text-cyan-300" />
               <span className="title-font text-[11px] font-bold tracking-[0.32em] text-cyan-300">AGENT PASSPORT</span>
@@ -401,13 +444,27 @@ export default function ShareContent() {
             </p>
           </div>
 
-          <div className="grid gap-8 lg:grid-cols-[1fr_400px] lg:items-start">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_390px] lg:items-start">
             <motion.div initial={false} className="flex justify-center lg:justify-start">
-              <TiltedCard maxTilt={8} scale={1.02}>
+              {card.generatedCardImageUrl ? (
                 <div
                   ref={cardRef}
-                  className="relative overflow-hidden rounded-[28px] border-2 bg-[#05060a]"
-                  style={{
+                  className="relative w-full max-w-[430px] overflow-hidden rounded-[28px] border border-cyan-300/24 bg-black shadow-[0_0_70px_rgba(34,211,238,0.18)]"
+                  style={{ aspectRatio: "4/5" }}
+                >
+                  <img
+                    src={card.generatedCardImageUrl}
+                    alt={`${displayName} 的 AI Agent 身份卡`}
+                    className="h-full w-full object-cover"
+                  />
+                  <div className="pointer-events-none absolute inset-0 rounded-[28px] ring-1 ring-white/10" />
+                </div>
+              ) : (
+                <TiltedCard maxTilt={8} scale={1.02}>
+                  <div
+                    ref={cardRef}
+                    className="relative overflow-hidden rounded-[28px] border-2 bg-[#05060a]"
+                    style={{
                     aspectRatio: "3/4",
                     width: "100%",
                     maxWidth: "380px",
@@ -563,10 +620,10 @@ export default function ShareContent() {
                   </AnimatePresence>
                 </div>
               </TiltedCard>
+              )}
             </motion.div>
-
             <motion.div initial={false} className="space-y-5">
-              <LiquidGlassCard className="p-5" mode="prominent" blurAmount={0.06} aberrationIntensity={1.4} cornerRadius={24}>
+              <StableSharePanel>
                 <div className="mb-4 flex items-center gap-3">
                   <Share2 className="h-5 w-5 text-violet-300" />
                   <h3 className="title-font text-lg font-bold text-white">身份卡操作</h3>
@@ -617,9 +674,9 @@ export default function ShareContent() {
                     </Link>
                   </div>
                 </div>
-              </LiquidGlassCard>
+              </StableSharePanel>
 
-              <LiquidGlassCard className="p-5" mode="standard" blurAmount={0.05} aberrationIntensity={1.3} cornerRadius={20}>
+              <StableSharePanel>
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <Copy className="h-5 w-5 text-cyan-300" />
@@ -635,9 +692,9 @@ export default function ShareContent() {
                 <p className="rounded-xl border border-white/[0.08] bg-black/30 p-3 text-[13px] leading-relaxed text-white/85">
                   {shareText}
                 </p>
-              </LiquidGlassCard>
+              </StableSharePanel>
 
-              <LiquidGlassCard className="p-5" mode="standard" blurAmount={0.05} aberrationIntensity={1.3} cornerRadius={20}>
+              <StableSharePanel>
                 <div className="mb-4 flex items-center gap-3">
                   <Link2 className="h-5 w-5 text-violet-300" />
                   <h3 className="title-font text-lg font-bold text-white">分享到社交平台</h3>
@@ -666,9 +723,9 @@ export default function ShareContent() {
                     </button>
                   </div>
                 </div>
-              </LiquidGlassCard>
+              </StableSharePanel>
 
-              <LiquidGlassCard className="p-5" mode="standard" blurAmount={0.05} aberrationIntensity={1.3} cornerRadius={20}>
+              <StableSharePanel>
                 <div className="mb-4 flex items-center gap-3">
                   <Trophy className="h-5 w-5 text-amber-300" />
                   <h3 className="title-font text-lg font-bold text-white">身份档案数据</h3>
@@ -717,11 +774,11 @@ export default function ShareContent() {
                     </span>
                   </div>
                 </div>
-              </LiquidGlassCard>
+              </StableSharePanel>
             </motion.div>
           </div>
 
-          <div className="mt-16 grid gap-5 md:grid-cols-3">
+          <div className="mt-12 grid gap-5 md:grid-cols-3">
             <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 backdrop-blur-xl">
               <div className="mb-3 flex items-center gap-2">
                 <Users className="h-4 w-4 text-cyan-300" />
@@ -776,3 +833,4 @@ export default function ShareContent() {
     </main>
   );
 }
+

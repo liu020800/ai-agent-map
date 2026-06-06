@@ -1,9 +1,9 @@
 "use client";
 
-import dynamic from "next/dynamic";
+
 import type { ReactNode } from "react";
 
-const LiquidGlass = dynamic(() => import("liquid-glass-react"), { ssr: false });
+import LiquidGlass from "liquid-glass-react";
 
 interface LiquidGlassCardProps {
   children: ReactNode;
@@ -49,3 +49,5 @@ export default function LiquidGlassCard({
     </LiquidGlass>
   );
 }
+
+

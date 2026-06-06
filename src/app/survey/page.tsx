@@ -39,6 +39,7 @@ import {
   generateIdentityId,
 } from "@/lib/survey-service";
 import { toolColor } from "@/data/mock";
+import { generateAiIdentityCard } from "@/lib/api-client";
 import type { SurveyFormPayload } from "@/lib/types";
 
 type Step = 1 | 2 | 3 | 4;
@@ -213,6 +214,8 @@ type LatestPassportCard = {
   signalStrength: number;
   signature: string;
   scenarios: string[];
+  generatedCardImageUrl?: string;
+  generatedCardShareText?: string;
 };
 
 const savePassportToStorage = (card: LatestPassportCard) => {
@@ -226,7 +229,7 @@ const savePassportToStorage = (card: LatestPassportCard) => {
 
   const handleGenerateAndShare = useCallback(async () => {
     setSubmitStatus("loading");
-    setSubmitMessage("正在装配身份卡...");
+    setSubmitMessage("正在生成专属 AI Agent 身份卡图片...");
     let newId = identityId;
     let newCreated = createdAt;
     try {
@@ -239,6 +242,14 @@ const savePassportToStorage = (card: LatestPassportCard) => {
       /* still proceed with local identity */
     }
     const scenarioNames = SURVEY_SCENARIOS.filter((s) => scenarios.includes(s.id)).map((s) => s.name);
+    const aiCard = await generateAiIdentityCard({
+      nickname: (nickname || "").trim() || "匿名 Agent",
+      province,
+      city: (city || "").trim(),
+      tools,
+      signature: (signature || "").trim() || "用 AI 扩展自己的能力边界",
+    });
+
     const card: LatestPassportCard = {
       id: newId,
       nickname: (nickname || "").trim() || "匿名 Agent",
@@ -255,11 +266,13 @@ const savePassportToStorage = (card: LatestPassportCard) => {
       rarity: rarityName,
       signalStrength: signal,
       signature: (signature || "").trim() || "用 AI 扩展自己的能力边界",
-      scenarios: scenarioNames
+      scenarios: scenarioNames,
+      generatedCardImageUrl: aiCard?.imageUrl,
+      generatedCardShareText: aiCard?.shareText,
     };
     savePassportToStorage(card);
     setSubmitStatus("success");
-    setSubmitMessage("已生成 AI Agent Passport！正在跳转到分享页...");
+    setSubmitMessage(aiCard?.imageUrl ? "已生成 AI Agent 身份卡图片！正在跳转到分享页..." : "已生成身份卡数据，图片生成暂不可用，正在跳转到分享页...");
     setTimeout(() => {
       if (typeof window !== "undefined") {
         window.location.href = "/share";
@@ -268,7 +281,7 @@ const savePassportToStorage = (card: LatestPassportCard) => {
   }, [buildPayload, identityId, createdAt, nickname, level, rarityName, tools, avatarSeed, province, city, role.title, signal, signature, scenarios]);
 
     return (
-    <main className="relative min-h-screen overflow-hidden pb-20 pt-4">
+    <main className="relative min-h-screen overflow-hidden pb-16 pt-0">
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute left-[8%] top-[10%] h-[28rem] w-[28rem] rounded-full bg-[rgba(34,211,238,0.18)] blur-[130px]" />
         <div className="absolute right-[6%] top-[14%] h-[26rem] w-[26rem] rounded-full bg-[rgba(168,85,247,0.16)] blur-[130px]" />
@@ -280,7 +293,7 @@ const savePassportToStorage = (card: LatestPassportCard) => {
         <PageShell width="wide">
           <motion.div
             initial={false}
-            className="hero-panel relative mb-6 overflow-hidden rounded-[28px] border border-cyan-300/20 bg-white/[0.035] p-6 shadow-[0_0_70px_rgba(34,211,238,0.12)] sm:p-8"
+            className="hero-panel relative mb-5 overflow-hidden rounded-[28px] border border-cyan-300/20 bg-white/[0.035] p-5 shadow-[0_0_54px_rgba(34,211,238,0.10)] sm:p-7"
           >
             <div aria-hidden className="cyber-grid absolute inset-0 opacity-50" />
             <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -288,7 +301,7 @@ const savePassportToStorage = (card: LatestPassportCard) => {
             </div>
             <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/70 to-transparent" />
 
-            <div className="relative grid grid-cols-1 gap-10 lg:grid-cols-[1.5fr_1fr] lg:items-center">
+            <div className="relative grid grid-cols-1 gap-8 lg:grid-cols-[1.45fr_0.95fr] lg:items-center">
               <div>
                 <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/[0.05] px-4 py-2">
                   <ScanLine className="h-3.5 w-3.5 text-cyan-300/85" />
@@ -341,7 +354,7 @@ const savePassportToStorage = (card: LatestPassportCard) => {
             </div>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] xl:grid-cols-[minmax(0,1fr)_420px]">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_390px]">
             <div>
               <AnimatePresence mode="wait">
                 {step === 1 && (
@@ -774,7 +787,7 @@ function LivePreview({
       </div>
 
       <div
-        className="relative mx-auto aspect-[3/4] w-full max-w-[400px] overflow-hidden rounded-[30px] border bg-[#05060a] p-5 shadow-[0_0_72px_rgba(34,211,238,0.20)]"
+        className="relative mx-auto aspect-[3/4] w-full max-w-[360px] overflow-hidden rounded-[28px] border bg-[#05060a] p-4 shadow-[0_0_52px_rgba(34,211,238,0.16)]"
         style={{
           borderColor: `${rarityAccent}66`,
           boxShadow: `0 0 72px ${rarityAccent}22, inset 0 0 40px rgba(255,255,255,0.035)`,

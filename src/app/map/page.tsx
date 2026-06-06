@@ -8,9 +8,11 @@ import {
   Users, Code, Cpu, BookOpen, FileText, Network, Trophy, ArrowRight, Activity, Brain
 } from "lucide-react";
 import CountUp from "@/components/react-bits/CountUp";
-import LiquidGlassCard from "@/components/react-bits/LiquidGlassCard";
 import { PageShell, Section } from "@/components/ui";
-import { MOCK_OVERVIEW, MOCK_PROVINCES, MOCK_TOOLS } from "@/data/mock";
+import ChinaSvgMap from "@/components/ChinaSvgMap";
+import { toolColor } from "@/data/mock";
+import { SURVEY_PROVINCES } from "@/lib/survey-service";
+import { fetchRanking, type RankingData } from "@/lib/api-client";
 
 type ProvinceSignal = {
   name: string;
@@ -45,6 +47,30 @@ type CampSignal = {
   tone: string;
 };
 
+function StableGlassCard({
+  children,
+  className = "",
+  tone = "cyan",
+}: {
+  children: React.ReactNode;
+  className?: string;
+  tone?: "cyan" | "emerald" | "amber" | "violet";
+}) {
+  const toneClass = {
+    cyan: "border-cyan-300/16 shadow-[0_0_34px_rgba(34,211,238,0.10)]",
+    emerald: "border-emerald-300/16 shadow-[0_0_34px_rgba(16,185,129,0.10)]",
+    amber: "border-amber-300/16 shadow-[0_0_34px_rgba(251,191,36,0.10)]",
+    violet: "border-violet-300/16 shadow-[0_0_34px_rgba(168,85,247,0.10)]",
+  }[tone];
+
+  return (
+    <div className={`relative overflow-hidden rounded-2xl border bg-[linear-gradient(135deg,rgba(15,23,42,0.78),rgba(2,6,23,0.62))] p-5 backdrop-blur-xl ${toneClass} ${className}`}>
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:28px_28px] opacity-30" />
+      <div className="relative z-10">{children}</div>
+    </div>
+  );
+}
+
 const EXTENDED_PROVINCES: ProvinceSignal[] = [
   { name: "广东", value: 28, cityCount: 4, growthRate: 18, topTool: "Codex" },
   { name: "北京", value: 25, cityCount: 1, growthRate: 22, topTool: "Claude Code" },
@@ -57,7 +83,29 @@ const EXTENDED_PROVINCES: ProvinceSignal[] = [
   { name: "河南", value: 9, cityCount: 2, growthRate: 14, topTool: "豆包" },
   { name: "陕西", value: 8, cityCount: 2, growthRate: 11, topTool: "Cursor" },
   { name: "福建", value: 9, cityCount: 3, growthRate: 9, topTool: "n8n" },
-  { name: "重庆", value: 7, cityCount: 1, growthRate: 17, topTool: "OpenCode" }
+  { name: "重庆", value: 7, cityCount: 1, growthRate: 17, topTool: "OpenCode" },
+  { name: "天津", value: 8, cityCount: 1, growthRate: 13, topTool: "Kimi" },
+  { name: "河北", value: 10, cityCount: 3, growthRate: 12, topTool: "DeepSeek" },
+  { name: "山西", value: 6, cityCount: 2, growthRate: 10, topTool: "Cursor" },
+  { name: "内蒙古", value: 6, cityCount: 2, growthRate: 9, topTool: "Ollama" },
+  { name: "辽宁", value: 10, cityCount: 2, growthRate: 15, topTool: "Codex" },
+  { name: "吉林", value: 5, cityCount: 2, growthRate: 8, topTool: "豆包" },
+  { name: "黑龙江", value: 5, cityCount: 2, growthRate: 7, topTool: "Kimi" },
+  { name: "安徽", value: 11, cityCount: 3, growthRate: 16, topTool: "Dify" },
+  { name: "江西", value: 8, cityCount: 2, growthRate: 12, topTool: "DeepSeek" },
+  { name: "湖南", value: 10, cityCount: 2, growthRate: 17, topTool: "通义千问" },
+  { name: "广西", value: 7, cityCount: 2, growthRate: 11, topTool: "n8n" },
+  { name: "海南", value: 4, cityCount: 2, growthRate: 8, topTool: "Kimi" },
+  { name: "贵州", value: 6, cityCount: 2, growthRate: 12, topTool: "DeepSeek" },
+  { name: "云南", value: 7, cityCount: 2, growthRate: 13, topTool: "Ollama" },
+  { name: "西藏", value: 3, cityCount: 1, growthRate: 6, topTool: "Kimi" },
+  { name: "甘肃", value: 5, cityCount: 2, growthRate: 9, topTool: "豆包" },
+  { name: "青海", value: 3, cityCount: 1, growthRate: 5, topTool: "Ollama" },
+  { name: "宁夏", value: 3, cityCount: 1, growthRate: 7, topTool: "DeepSeek" },
+  { name: "新疆", value: 5, cityCount: 2, growthRate: 10, topTool: "Cursor" },
+  { name: "香港", value: 6, cityCount: 1, growthRate: 14, topTool: "Claude Code" },
+  { name: "澳门", value: 3, cityCount: 1, growthRate: 6, topTool: "豆包" },
+  { name: "台湾", value: 7, cityCount: 2, growthRate: 12, topTool: "Codex" }
 ];
 
 const PROVINCE_RADAR_POS: Record<string, { x: number; y: number }> = {
@@ -110,6 +158,8 @@ const CAMP_DISTRIBUTION: CampSignal[] = [
   { name: "内容创作", icon: FileText, count: 84, share: 7, tone: "#fb7185" }
 ];
 
+const ZERO_OVERVIEW = { total: 0, agentUsers: 0, appUsers: 0, todayNew: 0 };
+
 function StatCard({
   label, value, icon: Icon, tone = "#22d3ee", suffix
 }: {
@@ -139,13 +189,42 @@ function StatCard({
 function ProvinceRadar({ provinces, totalSignals }: { provinces: ProvinceSignal[]; totalSignals: number }) {
   const max = Math.max(...provinces.map((p) => p.value), 1);
   return (
-    <div className="relative aspect-square w-full max-w-[520px] mx-auto">
+    <div className="relative mx-auto aspect-square w-full max-w-[430px]">
       <div aria-hidden className="absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(34,211,238,0.18),transparent_72%)]" />
       <div className="absolute inset-0 rounded-full border border-cyan-300/15" />
       <div className="absolute inset-[8%] rounded-full border border-cyan-300/12" />
       <div className="absolute inset-[18%] rounded-full border border-cyan-300/10" />
       <div className="absolute inset-[28%] rounded-full border border-cyan-300/8" />
       <div className="absolute inset-[38%] rounded-full border border-cyan-300/5" />
+      <svg
+        aria-label="中国地图信号轮廓"
+        viewBox="0 0 100 100"
+        className="absolute inset-[9%] h-[82%] w-[82%] overflow-visible drop-shadow-[0_0_18px_rgba(34,211,238,0.35)]"
+      >
+        <defs>
+          <linearGradient id="china-map-stroke" x1="18" y1="14" x2="86" y2="88" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#22d3ee" stopOpacity="0.95" />
+            <stop offset="0.55" stopColor="#60a5fa" stopOpacity="0.72" />
+            <stop offset="1" stopColor="#a855f7" stopOpacity="0.82" />
+          </linearGradient>
+          <radialGradient id="china-map-fill" cx="58%" cy="48%" r="58%">
+            <stop stopColor="#22d3ee" stopOpacity="0.18" />
+            <stop offset="0.72" stopColor="#0f172a" stopOpacity="0.08" />
+            <stop offset="1" stopColor="#020617" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        <path
+          d="M18 30 L26 22 L39 20 L48 13 L61 16 L73 13 L82 21 L80 32 L88 38 L82 48 L88 58 L80 67 L78 78 L66 74 L57 84 L45 79 L32 84 L24 73 L15 69 L20 58 L12 49 L18 39 Z"
+          fill="url(#china-map-fill)"
+          stroke="url(#china-map-stroke)"
+          strokeWidth="1.7"
+          strokeLinejoin="round"
+        />
+        <path d="M55 16 L56 82 M31 24 L77 74 M16 50 L87 50 M28 74 L78 23" stroke="#22d3ee" strokeOpacity="0.12" strokeWidth="0.6" />
+        <path d="M82 72 C87 70 91 73 90 78 C87 82 82 79 82 72Z" fill="#22d3ee" fillOpacity="0.12" stroke="#22d3ee" strokeOpacity="0.45" strokeWidth="0.8" />
+        <circle cx="76" cy="86" r="1.4" fill="#22d3ee" fillOpacity="0.8" />
+        <circle cx="79" cy="88" r="0.9" fill="#a855f7" fillOpacity="0.75" />
+      </svg>
       <div aria-hidden className="absolute top-1/2 left-0 right-0 h-px bg-cyan-300/15" />
       <div aria-hidden className="absolute left-1/2 top-0 bottom-0 w-px bg-cyan-300/15" />
       <div aria-hidden className="absolute inset-0 [transform:rotate(45deg)]">
@@ -189,15 +268,99 @@ function ProvinceRadar({ provinces, totalSignals }: { provinces: ProvinceSignal[
   );
 }
 
+function toolCategory(name: string): ToolSignal["category"] {
+  if (["Codex", "Claude Code", "OpenCode", "Cursor", "OpenClaw", "Hermes"].includes(name)) return "Agent";
+  if (["Dify", "n8n"].includes(name)) return "Automation";
+  if (["Ollama", "Cherry Studio"].includes(name)) return "Local";
+  return "App";
+}
+
+function buildProvinceSignals(ranking: RankingData | null): ProvinceSignal[] {
+  const provinceStats = new Map((ranking?.provinces ?? []).map((p) => [p.name, p.value]));
+  const cityStats = ranking?.cities ?? [];
+  const topToolsByProvince = new Map<string, string>();
+  for (const city of cityStats) {
+    if (!topToolsByProvince.has(city.province) && city.topTool) topToolsByProvince.set(city.province, city.topTool);
+  }
+
+  return SURVEY_PROVINCES.map((province) => ({
+    name: province,
+    value: provinceStats.get(province) ?? 0,
+    cityCount: cityStats.filter((city) => city.province === province && city.count > 0).length,
+    growthRate: 0,
+    topTool: topToolsByProvince.get(province) || "待点亮",
+  })).sort((a, b) => b.value - a.value || a.name.localeCompare(b.name, "zh-Hans-CN"));
+}
+
+function buildToolSignals(ranking: RankingData | null): ToolSignal[] {
+  const tools = ranking?.tools ?? [];
+  const max = Math.max(...tools.map((tool) => tool.count), 1);
+  return tools.map((tool) => ({
+    name: tool.name,
+    category: toolCategory(tool.name),
+    count: tool.count,
+    heat: Math.round((tool.count / max) * 100),
+    growthRate: 0,
+  }));
+}
+
+function buildCityLog(ranking: RankingData | null): CitySignal[] {
+  const cities = ranking?.cities ?? [];
+  if (!cities.length) {
+    return [{ time: "--:--", city: "待点亮", province: "中国", role: "等待真实用户生成身份卡", tool: "AI Agent Map", tone: "#22d3ee" }];
+  }
+  const now = new Date();
+  return cities.slice(0, 8).map((city, index) => ({
+    time: new Date(now.getTime() - index * 5 * 60 * 1000).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" }),
+    city: city.city,
+    province: city.province,
+    role: city.topRole,
+    tool: city.topTool,
+    tone: toolColor(city.topTool),
+  }));
+}
+
+function buildCampDistribution(ranking: RankingData | null): CampSignal[] {
+  const roles = ranking?.roles ?? [];
+  const total = Math.max(roles.reduce((sum, role) => sum + role.count, 0), 1);
+  const icons = [Code, FileText, Cpu, Network, BookOpen, Sparkles];
+  const tones = ["#22d3ee", "#a855f7", "#10b981", "#f59e0b", "#06b6d4", "#fb7185"];
+  if (!roles.length) {
+    return [{ name: "等待真实用户", icon: Sparkles, count: 0, share: 0, tone: "#22d3ee" }];
+  }
+  return roles.slice(0, 6).map((role, index) => ({
+    name: role.role,
+    icon: icons[index] ?? Sparkles,
+    count: role.count,
+    share: Math.round((role.count / total) * 100),
+    tone: tones[index] ?? "#22d3ee",
+  }));
+}
+
 export default function MapPage() {
-  const overview = MOCK_OVERVIEW;
-  const provinces = EXTENDED_PROVINCES;
-  const tools = TOOL_HEAT_LIST;
-  const camps = CAMP_DISTRIBUTION;
-  const cityLog = CITY_SIGNAL_LOG;
-  const totalCities = provinces.reduce((s, p) => s + p.cityCount, 0);
+  const [ranking, setRanking] = useState<RankingData | null>(null);
+  useEffect(() => {
+    let active = true;
+    fetchRanking().then((data) => {
+      if (active) setRanking(data);
+    }).catch(() => {
+      if (active) setRanking(null);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const overview = ranking?.overview ?? ZERO_OVERVIEW;
+  const provinces = useMemo(() => buildProvinceSignals(ranking), [ranking]);
+  const activeProvinces = provinces.filter((p) => p.value > 0);
+  const radarProvinces = activeProvinces.length ? activeProvinces : provinces.slice(0, 8);
+  const tools = useMemo(() => buildToolSignals(ranking), [ranking]);
+  const camps = useMemo(() => buildCampDistribution(ranking), [ranking]);
+  const cityLog = useMemo(() => buildCityLog(ranking), [ranking]);
+  const totalCities = ranking?.cities?.length ?? 0;
   const hottestProvince = provinces[0];
-  const dominantTool = tools[0];
+  const dominantTool = tools[0] ?? { name: "待点亮", count: 0, category: "Agent" as const, heat: 0, growthRate: 0 };
   const [tick, setTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setTick((t) => (t + 1) % cityLog.length), 4000);
@@ -205,7 +368,7 @@ export default function MapPage() {
   }, [cityLog.length]);
 
   return (
-    <main className="relative min-h-screen overflow-hidden pb-20 pt-4">
+    <main className="relative min-h-screen overflow-hidden pb-16 pt-0">
       <style>{`@keyframes radar-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
 
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
@@ -214,10 +377,10 @@ export default function MapPage() {
         <div className="absolute bottom-[8%] left-1/2 h-[30rem] w-[30rem] -translate-x-1/2 rounded-full bg-[rgba(163,230,53,0.12)] blur-[130px]" />
       </div>
 
-      <Section className="relative z-10" spacing="md">
+      <Section className="relative z-10" spacing="sm">
         <PageShell width="wide">
           {/* HERO */}
-          <section className="mb-10 grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+          <section className="grid gap-8 pb-10 pt-6 lg:min-h-[560px] lg:grid-cols-[1fr_500px] lg:items-center">
             <motion.div initial={false} className="space-y-6">
               <div className="inline-flex items-center gap-2.5 rounded-full border border-cyan-300/20 bg-cyan-300/[0.05] px-4 py-2 backdrop-blur-xl">
                 <Crosshair className="h-4 w-4 text-cyan-300" />
@@ -259,34 +422,47 @@ export default function MapPage() {
               </div>
             </motion.div>
 
-            <motion.div initial={false}>
-              <ProvinceRadar provinces={provinces} totalSignals={overview.total} />
+            <motion.div initial={false} className="relative overflow-hidden rounded-3xl border border-cyan-300/18 bg-[linear-gradient(135deg,rgba(8,47,73,0.50),rgba(2,6,23,0.78))] p-5 shadow-[0_0_48px_rgba(34,211,238,0.12)] backdrop-blur-xl sm:p-6">
+              <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(34,211,238,0.16),transparent_45%)]" />
+              <div className="relative z-10 mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <p className="title-font text-[10px] uppercase tracking-[0.28em] text-cyan-300/70">Live Radar</p>
+                  <h2 className="title-font mt-1 text-xl font-black text-white">全国信号扫描盘</h2>
+                </div>
+                <span className="rounded-full border border-cyan-300/20 bg-cyan-300/[0.08] px-3 py-1 text-[10px] font-bold text-cyan-200">
+                  ONLINE
+                </span>
+              </div>
+              <ProvinceRadar provinces={radarProvinces} totalSignals={overview.total} />
             </motion.div>
           </section>
 
           {/* TOP STATS 6 cards */}
-          <section className="mb-12 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+          <section className="mb-10 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
             <StatCard label="全国总玩家" value={overview.total} icon={Users} tone="#22d3ee" />
             <StatCard label="Agent 阵营" value={overview.agentUsers} icon={Shield} tone="#a855f7" />
             <StatCard label="App 用户" value={overview.appUsers} icon={Zap} tone="#f59e0b" />
             <StatCard label="今日新增" value={overview.todayNew} icon={Sparkles} tone="#10b981" />
             <StatCard label="覆盖城市" value={totalCities} icon={MapPin} tone="#fb7185" />
-            <StatCard label="最热省份" value={hottestProvince.name} icon={Flame} tone="#fbbf24" />
+            <StatCard label="最热省份" value={hottestProvince.value > 0 ? hottestProvince.name : "待点亮"} icon={Flame} tone="#fbbf24" />
           </section>
 
           {/* PROVINCE HEAT + CITY SIGNAL FLOW */}
-          <section className="mb-12 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-            <LiquidGlassCard className="p-5" mode="standard" blurAmount={0.05} aberrationIntensity={1.3} cornerRadius={24}>
+          <section className="mb-10 grid gap-6 xl:grid-cols-[1.28fr_0.92fr]">
+            <StableGlassCard tone="cyan">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
                   <p className="title-font text-[10px] uppercase tracking-[0.28em] text-cyan-300/70">Province Heat Matrix</p>
-                  <h3 className="title-font mt-2 text-lg font-bold text-white">省份热力矩阵</h3>
+                  <h3 className="title-font mt-2 text-lg font-bold text-white">中国省份热力地图</h3>
                 </div>
                 <span className="title-font text-xs text-white/40">TOP {provinces.length}</span>
               </div>
+              <div className="mb-4 overflow-hidden rounded-2xl border border-cyan-300/12 bg-[#05080d]/72 p-3">
+                <ChinaSvgMap data={provinces} />
+              </div>
               <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
-                {provinces.map((p, i) => {
-                  const heatPct = Math.max(15, Math.min(100, p.value * 2.6));
+                {provinces.slice(0, 12).map((p, i) => {
+                  const heatPct = p.value > 0 ? Math.max(10, Math.min(100, p.value * 18)) : 0;
                   return (
                     <div
                       key={p.name}
@@ -298,15 +474,15 @@ export default function MapPage() {
                           <p className="title-font text-base font-black text-white">{p.name}</p>
                           <p className="mt-0.5 text-[10px] uppercase tracking-[0.2em] text-white/35">0{i + 1}</p>
                         </div>
-                        <span className="title-font rounded-md border border-emerald-400/20 bg-emerald-400/10 px-1.5 py-0.5 text-[10px] font-bold text-emerald-300">
-                          +{p.growthRate}%
+                        <span className="title-font rounded-md border border-cyan-400/20 bg-cyan-400/10 px-1.5 py-0.5 text-[10px] font-bold text-cyan-200">
+                          真实
                         </span>
                       </div>
                       <div className="relative mt-3 title-font text-2xl font-black text-cyan-300">
                         <CountUp to={p.value} duration={1.3} />
                       </div>
                       <div className="relative mt-1 text-[10px] text-white/40">
-                        {p.cityCount} 城市 · 最热 {p.topTool}
+                        {p.cityCount} 城市 · {p.topTool === "待点亮" ? "待点亮" : `最热 ${p.topTool}`}
                       </div>
                       <div className="relative mt-3 h-1.5 overflow-hidden rounded-full bg-white/[0.05]">
                         <div
@@ -318,9 +494,9 @@ export default function MapPage() {
                   );
                 })}
               </div>
-            </LiquidGlassCard>
+            </StableGlassCard>
 
-            <LiquidGlassCard className="p-5" mode="shader" blurAmount={0.05} aberrationIntensity={1.4} cornerRadius={24}>
+            <StableGlassCard tone="emerald">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
                   <p className="title-font text-[10px] uppercase tracking-[0.28em] text-emerald-300/70">City Signal Flow</p>
@@ -339,7 +515,7 @@ export default function MapPage() {
                     streaming
                   </span>
                 </div>
-                <div className="max-h-[420px] space-y-1.5 overflow-y-auto pr-1">
+                <div className="max-h-[360px] space-y-1.5 overflow-y-auto pr-1">
                   {cityLog.map((entry, i) => {
                     const active = i === tick;
                     return (
@@ -372,12 +548,12 @@ export default function MapPage() {
                   <span className="title-font">stream paused · refresh in {((4000 - (Date.now() % 4000)) / 1000).toFixed(1)}s</span>
                 </div>
               </div>
-            </LiquidGlassCard>
+            </StableGlassCard>
           </section>
 
           {/* EQUIPMENT HEAT + CAMP DISTRIBUTION */}
-          <section className="mb-12 grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-            <LiquidGlassCard className="p-5" mode="shader" blurAmount={0.05} aberrationIntensity={1.4} cornerRadius={24}>
+          <section className="mb-10 grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+            <StableGlassCard tone="amber">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
                   <p className="title-font text-[10px] uppercase tracking-[0.28em] text-amber-300/70">Equipment Heat Distribution</p>
@@ -423,16 +599,16 @@ export default function MapPage() {
                       <span className="title-font w-10 text-right text-sm font-black text-white">
                         <CountUp to={t.count} duration={1.2} />
                       </span>
-                      <span className="title-font w-12 text-right text-[11px] font-bold text-emerald-300">
-                        +{t.growthRate}%
+                      <span className="title-font w-12 text-right text-[11px] font-bold text-cyan-200">
+                        真实
                       </span>
                     </div>
                   );
                 })}
               </div>
-            </LiquidGlassCard>
+            </StableGlassCard>
 
-            <LiquidGlassCard className="p-5" mode="standard" blurAmount={0.05} aberrationIntensity={1.3} cornerRadius={24}>
+            <StableGlassCard tone="violet">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
                   <p className="title-font text-[10px] uppercase tracking-[0.28em] text-violet-300/70">Camp Distribution</p>
@@ -472,11 +648,11 @@ export default function MapPage() {
                   );
                 })}
               </div>
-            </LiquidGlassCard>
+            </StableGlassCard>
           </section>
 
           {/* BOTTOM CTA */}
-          <section className="mt-12">
+          <section className="mt-10">
             <div className="relative overflow-hidden rounded-[28px] border border-cyan-300/20 bg-[linear-gradient(135deg,rgba(34,211,238,0.08),rgba(168,85,247,0.06))] p-8 text-center shadow-[0_0_80px_rgba(34,211,238,0.18)] backdrop-blur-2xl sm:p-12">
               <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(34,211,238,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(34,211,238,0.04)_1px,transparent_1px)] bg-[size:32px_32px] opacity-50" />
               <div aria-hidden className="pointer-events-none absolute -top-10 left-1/2 h-40 w-40 -translate-x-1/2 rounded-full bg-cyan-300/30 blur-[100px]" />

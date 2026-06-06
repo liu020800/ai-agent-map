@@ -23,13 +23,19 @@ import { computeLevel, levelName } from "./level";
 
 export type ToolEntry = { name: string; count: number };
 export type ProvinceEntry = { name: string; value: number };
+export type CityEntry = { city: string; province: string; count: number; topTool: string; topRole: string };
+export type RoleEntry = { role: string; count: number; topTool: string };
 export type LevelEntry = { level: number; count: number };
 export type Overview = { total: number; agentUsers: number; appUsers: number; todayNew: number };
+export type TimelineEntry = { day: string; signals: number; active: number };
 
 export type RankingData = {
   tools: ToolEntry[];
   provinces: ProvinceEntry[];
+  cities: CityEntry[];
+  roles: RoleEntry[];
   levels: LevelEntry[];
+  timeline?: TimelineEntry[];
   overview: Overview;
   filters: { userType: string; tool: string };
 };
@@ -37,6 +43,8 @@ export type RankingData = {
 export type LatestCard = {
   nickname: string;
   province: string;
+  city?: string;
+  role?: string;
   primary_tool: string;
   tools: string[];
   ai_level: number;
@@ -121,6 +129,9 @@ function generateSlug(): string {
 type UserRow = {
   tools: string[] | null;
   province: string | null;
+  city?: string | null;
+  occupation?: string | null;
+  usage_purpose?: string[] | null;
   ai_level: number | null;
   created_at: string | null;
   user_type: string | null;
@@ -136,7 +147,22 @@ export async function fetchRanking(filters: RankingFilters = {}): Promise<Rankin
   const userType = filters.userType ?? "all";
   const selectedTool = filters.tool ?? "";
 
-  const select = "tools,province,ai_level,created_at,user_type,status";
+  try {
+    const params = new URLSearchParams();
+    if (userType !== "all") params.set("userType", userType);
+    if (selectedTool) params.set("tool", selectedTool);
+    const res = await fetch(`/api/ranking${params.toString() ? `?${params.toString()}` : ""}`, {
+      headers: { Accept: "application/json" },
+    });
+    if (res.ok) {
+      const body = (await res.json()) as RankingData;
+      if (body?.overview) return body;
+    }
+  } catch {
+    // Cloudflare Functions are unavailable in local static previews.
+  }
+
+  const select = "tools,province,city,occupation,usage_purpose,ai_level,created_at,user_type,status";
   let query = supabase.from("users").select(select).limit(50000);
   // Prefer "valid" filter if column exists; if it errors we fall through.
   query = query.eq("status", "valid");
@@ -157,6 +183,8 @@ export async function fetchRanking(filters: RankingFilters = {}): Promise<Rankin
 
   const toolMap = new Map<string, number>();
   const provinceMap = new Map<string, number>();
+  const cityMap = new Map<string, { city: string; province: string; count: number; toolCounts: Map<string, number>; roleCounts: Map<string, number> }>();
+  const roleMap = new Map<string, { count: number; toolCounts: Map<string, number> }>();
   const levelMap = new Map<number, number>();
   const todayPrefix = new Date().toISOString().split("T")[0];
   let todayNew = 0;
@@ -165,6 +193,23 @@ export async function fetchRanking(filters: RankingFilters = {}): Promise<Rankin
     const tools = row.tools ?? [];
     for (const tool of tools) toolMap.set(tool, (toolMap.get(tool) ?? 0) + 1);
     if (row.province) provinceMap.set(row.province, (provinceMap.get(row.province) ?? 0) + 1);
+    const role = cleanString(row.occupation) || deriveRoleFromPurpose(row.usage_purpose ?? []);
+    if (role) {
+      const stat = roleMap.get(role) ?? { count: 0, toolCounts: new Map<string, number>() };
+      stat.count += 1;
+      for (const tool of tools) stat.toolCounts.set(tool, (stat.toolCounts.get(tool) ?? 0) + 1);
+      roleMap.set(role, stat);
+    }
+    if (row.city || row.province) {
+      const city = cleanString(row.city, cleanString(row.province, "未知城市"));
+      const province = cleanString(row.province, "未知地区");
+      const key = `${province}-${city}`;
+      const stat = cityMap.get(key) ?? { city, province, count: 0, toolCounts: new Map<string, number>(), roleCounts: new Map<string, number>() };
+      stat.count += 1;
+      for (const tool of tools) stat.toolCounts.set(tool, (stat.toolCounts.get(tool) ?? 0) + 1);
+      if (role) stat.roleCounts.set(role, (stat.roleCounts.get(role) ?? 0) + 1);
+      cityMap.set(key, stat);
+    }
     const level = row.ai_level ?? 1;
     levelMap.set(level, (levelMap.get(level) ?? 0) + 1);
     if (row.created_at && row.created_at.startsWith(todayPrefix)) todayNew++;
@@ -177,6 +222,19 @@ export async function fetchRanking(filters: RankingFilters = {}): Promise<Rankin
   const provinces: ProvinceEntry[] = [...provinceMap.entries()]
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value);
+  const cities: CityEntry[] = [...cityMap.values()]
+    .map((entry) => ({
+      city: entry.city,
+      province: entry.province,
+      count: entry.count,
+      topTool: topMapKey(entry.toolCounts) || "未记录",
+      topRole: topMapKey(entry.roleCounts) || "AI 探索者",
+    }))
+    .sort((a, b) => b.count - a.count);
+  const roles: RoleEntry[] = [...roleMap.entries()]
+    .map(([role, entry]) => ({ role, count: entry.count, topTool: topMapKey(entry.toolCounts) || "未记录" }))
+    .sort((a, b) => b.count - a.count);
+  const timeline = buildTimeline(filtered);
   const levels: LevelEntry[] = Array.from({ length: 5 }, (_, i) => i + 1).map((level) => ({
     level,
     count: levelMap.get(level) ?? 0,
@@ -188,14 +246,58 @@ export async function fetchRanking(filters: RankingFilters = {}): Promise<Rankin
   return {
     tools,
     provinces,
+    cities,
+    roles,
     levels,
+    timeline,
     overview: { total, agentUsers, appUsers, todayNew },
     filters: { userType, tool: selectedTool },
   };
 }
 
+function buildTimeline(rows: UserRow[]): TimelineEntry[] {
+  const now = new Date();
+  return Array.from({ length: 7 }, (_, index) => {
+    const day = new Date(now);
+    day.setDate(now.getDate() - (6 - index));
+    const key = day.toISOString().split("T")[0];
+    const signals = rows.filter((row) => row.created_at?.startsWith(key)).length;
+    const active = rows.filter((row) => row.created_at && row.created_at.slice(0, 10) <= key).length;
+    return {
+      day: day.toLocaleDateString("zh-CN", { weekday: "short" }).replace("星期", "周"),
+      signals,
+      active,
+    };
+  });
+}
+
+function topMapKey(map: Map<string, number>): string {
+  return [...map.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "";
+}
+
+function deriveRoleFromPurpose(purpose: string[]): string {
+  const set = new Set(purpose);
+  if (set.has("code") || set.has("web-dev")) return "代码指挥官";
+  if (set.has("automation") || set.has("nas-docker")) return "自动化玩家";
+  if (set.has("knowledge-base")) return "知识库构建者";
+  if (set.has("local-llm")) return "本地模型驯养师";
+  if (set.has("data-analysis") || set.has("invest")) return "数据分析师";
+  if (set.has("article") || set.has("learning")) return "内容生产者";
+  return "AI 探索者";
+}
+
 export async function fetchLatestCards(limit = 12): Promise<LatestCard[]> {
-  const select = "nickname,province,primary_tool,tools,ai_level,ai_level_name,avatar_seed,card_slug,created_at,status";
+  try {
+    const res = await fetch(`/api/latest-cards?limit=${limit}`, { headers: { Accept: "application/json" } });
+    if (res.ok) {
+      const body = (await res.json()) as { cards?: LatestCard[] };
+      if (Array.isArray(body.cards)) return body.cards.slice(0, limit);
+    }
+  } catch {
+    // Cloudflare Functions are unavailable in local static previews.
+  }
+
+  const select = "nickname,province,city,occupation,usage_purpose,primary_tool,tools,ai_level,ai_level_name,avatar_seed,card_slug,created_at,status";
   let query = supabase
     .from("users")
     .select(select)
@@ -219,6 +321,8 @@ export async function fetchLatestCards(limit = 12): Promise<LatestCard[]> {
     return {
       nickname: cleanString(r.nickname as string) || `Agent_${String(index + 1).padStart(2, "0")}`,
       province: cleanString(r.province as string) || "未知地区",
+      city: cleanString(r.city as string),
+      role: cleanString(r.occupation as string) || deriveRoleFromPurpose((r.usage_purpose as string[] | null) ?? []),
       primary_tool: cleanString(r.primary_tool as string) || cleanString((r.tools as string[] | null)?.[0]) || "Codex",
       tools: Array.isArray(r.tools) ? (r.tools as string[]) : [],
       ai_level: typeof r.ai_level === "number" ? (r.ai_level as number) : 1,
@@ -384,6 +488,38 @@ export async function generateAiAvatar(seed: string, level: number, tools: strin
     if (!res.ok) return null;
     const body = (await res.json()) as { url?: string };
     return body.url ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export type GenerateCardImagePayload = {
+  nickname: string;
+  province: string;
+  city?: string;
+  tools: string[];
+  signature?: string;
+};
+
+export type GenerateCardImageResult = {
+  imageUrl: string;
+  shareText: string;
+};
+
+export async function generateAiIdentityCard(payload: GenerateCardImagePayload): Promise<GenerateCardImageResult | null> {
+  try {
+    const res = await fetch("/api/generate-card", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) return null;
+    const body = (await res.json()) as { success?: boolean; imageUrl?: string; shareText?: string };
+    if (!body.success || !body.imageUrl) return null;
+    return {
+      imageUrl: body.imageUrl,
+      shareText: body.shareText || "",
+    };
   } catch {
     return null;
   }

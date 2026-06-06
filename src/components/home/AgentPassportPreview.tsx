@@ -9,9 +9,9 @@ const LOADOUT = ["Codex", "Claude Code", "OpenCode"];
 export default function AgentPassportPreview() {
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.92, rotateX: 10, rotateY: -8 }}
-      animate={{ opacity: 1, scale: 1, rotateX: 0, rotateY: 0 }}
-      transition={{ delay: 0.55, duration: 0.95, type: "spring", stiffness: 120, damping: 16 }}
+      initial={false}
+      whileHover={{ scale: 1.015, rotateX: 2, rotateY: -2 }}
+      transition={{ type: "spring", stiffness: 160, damping: 18 }}
       className="relative"
       style={{ perspective: "1200px" }}
     >

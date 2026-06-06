@@ -9,15 +9,24 @@ import {
   FileText, Brain, Activity, ChevronRight, Gem, Hash
 } from "lucide-react";
 import CountUp from "@/components/react-bits/CountUp";
-import LiquidGlassCard from "@/components/react-bits/LiquidGlassCard";
 import { PageShell, Section } from "@/components/ui";
-import { toolColor, MOCK_OVERVIEW, MOCK_PROVINCES, MOCK_TOOLS, MOCK_RECENT_CARDS } from "@/data/mock";
+import { toolColor } from "@/data/mock";
+import { fetchLatestCards, fetchRanking, type LatestCard, type RankingData } from "@/lib/api-client";
 
 type ToolRank = { id: string; name: string; category: string; users: number; heat: number; growthRate: number };
 type CityRank = { id: string; city: string; province: string; users: number; topRole: string; topTool: string; growthRate: number };
 type ProvinceRank = { id: string; province: string; users: number; cityCount: number; topTool: string; growthRate: number };
 type RoleRank = { id: string; role: string; users: number; share: number; topTool: string; growthRate: number; description: string; icon: typeof Code };
 type LatestPassport = { id: string; nickname: string; city: string; province: string; role: string; level: number; tools: string[]; signalStrength: number; createdAt: string };
+
+function StablePanel({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`relative overflow-hidden rounded-2xl border border-cyan-300/14 bg-[linear-gradient(135deg,rgba(15,23,42,0.80),rgba(2,6,23,0.64))] p-5 shadow-[0_0_34px_rgba(34,211,238,0.10)] backdrop-blur-xl sm:p-6 ${className}`}>
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:28px_28px] opacity-25" />
+      <div className="relative z-10">{children}</div>
+    </div>
+  );
+}
 
 const TOOL_RANKING: ToolRank[] = [
   { id: "t-codex", name: "Codex", category: "Agent", users: 188, heat: 100, growthRate: 24 },
@@ -119,7 +128,7 @@ function RowShell({
   badge?: string;
   value: number;
   energy: number;
-  growth: number;
+  growth?: number;
   accent: string;
   isTop3: boolean;
 }) {
@@ -160,7 +169,7 @@ function RowShell({
         <div className="title-font text-base font-black text-white sm:text-lg">
           <CountUp to={value} duration={1.2} />
         </div>
-        <div className="mt-0.5 text-[10px] font-bold text-emerald-300">+{growth}%</div>
+        <div className="mt-0.5 text-[10px] font-bold text-cyan-200">{typeof growth === "number" ? `+${growth}%` : "真实数据"}</div>
       </div>
     </div>
   );
@@ -196,7 +205,7 @@ function RoleCard({ r, rank, isTop3 }: { r: RoleRank; rank: number; isTop3: bool
           </p>
           <p className="text-[10px] text-white/40">占比 {r.share}% · 主力 {r.topTool}</p>
         </div>
-        <span className="rounded-md border border-emerald-400/20 bg-emerald-400/10 px-1.5 py-0.5 text-[10px] font-bold text-emerald-300">+{r.growthRate}%</span>
+        <span className="rounded-md border border-cyan-400/20 bg-cyan-400/10 px-1.5 py-0.5 text-[10px] font-bold text-cyan-200">真实数据</span>
       </div>
       <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/[0.05]">
         <div className="h-full rounded-full bg-[linear-gradient(90deg,#22d3ee,#a855f7,#fb7185)]" style={{ width: `${Math.min(100, r.share * 3)}%` }} />
@@ -251,12 +260,111 @@ function PassportMiniCard({ p, rank }: { p: LatestPassport; rank: number }) {
   );
 }
 
-function ChampionDashboard() {
-  const tool = TOOL_RANKING[0];
-  const city = CITY_RANKING[0];
-  const highest = LATEST_PASSPORTS.reduce((a, b) => (a.level > b.level ? a : b));
-  const fastest = ROLE_RANKING.reduce((a, b) => (a.growthRate > b.growthRate ? a : b));
-  const energy = 88;
+function toolCategory(name: string): string {
+  if (["Codex", "Claude Code", "OpenCode", "Cursor", "OpenClaw", "Hermes"].includes(name)) return "Agent";
+  if (["Dify", "n8n"].includes(name)) return "Automation";
+  if (["Ollama", "Cherry Studio"].includes(name)) return "Local";
+  return "App";
+}
+
+function toToolRanking(ranking: RankingData | null): ToolRank[] {
+  const tools = ranking?.tools ?? [];
+  const max = Math.max(...tools.map((tool) => tool.count), 1);
+  return tools.map((tool) => ({
+    id: `real-tool-${tool.name}`,
+    name: tool.name,
+    category: toolCategory(tool.name),
+    users: tool.count,
+    heat: Math.round((tool.count / max) * 100),
+    growthRate: 0,
+  })).sort((a, b) => b.users - a.users || indexOfTool(a.name) - indexOfTool(b.name));
+}
+
+function indexOfTool(name: string): number {
+  return ["Codex", "Claude Code", "OpenCode", "Cursor", "DeepSeek", "豆包", "Kimi", "通义千问", "Dify", "n8n", "Ollama"].indexOf(name);
+}
+
+function toCityRanking(ranking: RankingData | null): CityRank[] {
+  return (ranking?.cities ?? []).map((city) => ({
+    id: `real-city-${city.province}-${city.city}`,
+    city: city.city,
+    province: city.province,
+    users: city.count,
+    topRole: city.topRole,
+    topTool: city.topTool,
+    growthRate: 0,
+  }));
+}
+
+function toProvinceRanking(ranking: RankingData | null): ProvinceRank[] {
+  const cityCounts = new Map<string, number>();
+  for (const city of ranking?.cities ?? []) cityCounts.set(city.province, (cityCounts.get(city.province) ?? 0) + 1);
+  const provinceTool = new Map<string, string>();
+  for (const city of ranking?.cities ?? []) {
+    if (!provinceTool.has(city.province) && city.topTool) provinceTool.set(city.province, city.topTool);
+  }
+  return (ranking?.provinces ?? []).map((province) => ({
+    id: `real-province-${province.name}`,
+    province: province.name,
+    users: province.value,
+    cityCount: cityCounts.get(province.name) ?? 0,
+    topTool: provinceTool.get(province.name) || "未记录",
+    growthRate: 0,
+  }));
+}
+
+function toRoleRanking(ranking: RankingData | null): RoleRank[] {
+  const total = Math.max(ranking?.overview.total ?? 0, 1);
+  const icons = [Code, Network, FileText, Cpu, BookOpen, Activity, Brain];
+  const descriptions = new Map([
+    ["代码指挥官", "在 IDE 与终端之间调度 AI Agent，重塑生产流水线。"],
+    ["自动化玩家", "用工作流串联工具链，让机器替你完成重复劳动。"],
+    ["内容生产者", "把灵感、笔记和创作交给 AI，把风格留给自己。"],
+    ["本地模型驯养师", "把大模型装进本地环境，掌控自己的智能。"],
+    ["知识库构建者", "搭建 RAG 与私域知识，让 AI 学会你的资料。"],
+    ["数据分析师", "在 SQL、财报、量化信号里寻找下一个真相。"],
+    ["AI 探索者", "走在 AI 工具的最前沿，等待下一个新大陆。"],
+  ]);
+  return (ranking?.roles ?? []).map((role, index) => ({
+    id: `real-role-${role.role}`,
+    role: role.role,
+    users: role.count,
+    share: Math.round((role.count / total) * 100),
+    topTool: role.topTool,
+    growthRate: 0,
+    description: descriptions.get(role.role) || "来自真实用户提交的 AI Agent 身份角色。",
+    icon: icons[index] ?? Brain,
+  }));
+}
+
+function toLatestPassports(cards: LatestCard[]): LatestPassport[] {
+  return cards.map((card, index) => ({
+    id: card.card_slug || `REAL-${index + 1}`,
+    nickname: card.nickname,
+    city: card.city || card.province,
+    province: card.province,
+    role: card.role || "AI 探索者",
+    level: card.ai_level,
+    tools: card.tools?.length ? card.tools : [card.primary_tool],
+    signalStrength: Math.min(99, 52 + card.ai_level * 8),
+    createdAt: card.created_at ? new Date(card.created_at).toLocaleDateString("zh-CN") : "刚刚",
+  }));
+}
+
+function EmptyRealData({ label }: { label: string }) {
+  return (
+    <div className="rounded-2xl border border-cyan-300/12 bg-cyan-300/[0.04] p-6 text-center text-sm text-cyan-100/75">
+      暂无真实{label}数据，生成第一张身份卡后这里会自动点亮。
+    </div>
+  );
+}
+
+function ChampionDashboard({ tools, cities, latest, roles }: { tools: ToolRank[]; cities: CityRank[]; latest: LatestPassport[]; roles: RoleRank[] }) {
+  const tool = tools[0] ?? { name: "待点亮", category: "真实数据", users: 0, heat: 0, growthRate: 0 };
+  const city = cities[0] ?? { city: "待点亮", province: "", users: 0, topRole: "AI 探索者", topTool: "未记录", growthRate: 0 };
+  const highest = latest.reduce((a, b) => (a.level > b.level ? a : b), latest[0] ?? { nickname: "待点亮", level: 0 });
+  const fastest = roles[0] ?? { role: "待点亮", users: 0, share: 0, topTool: "未记录", growthRate: 0, description: "", icon: Brain };
+  const energy = tool.heat;
   return (
     <div className="relative overflow-hidden rounded-[28px] border border-amber-300/20 bg-[linear-gradient(135deg,rgba(251,191,36,0.10),rgba(168,85,247,0.06))] p-6 shadow-[0_0_72px_rgba(251,191,36,0.18)] backdrop-blur-2xl sm:p-7">
       <div aria-hidden className="absolute inset-0 bg-[linear-gradient(rgba(251,191,36,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(251,191,36,0.04)_1px,transparent_1px)] bg-[size:28px_28px] opacity-40" />
@@ -296,7 +404,7 @@ function ChampionDashboard() {
           <div className="flex-1">
             <p className="text-[10px] uppercase tracking-[0.22em] text-white/45">Current Champion Tool</p>
             <p className="title-font mt-1 text-3xl font-black text-white drop-shadow-[0_0_18px_rgba(34,211,238,0.4)]" style={{ color: toolColor(tool.name) }}>{tool.name}</p>
-            <p className="mt-1 text-[11px] text-white/55">{tool.users} 次装配 · 增长 +{tool.growthRate}% · 类别 {tool.category}</p>
+            <p className="mt-1 text-[11px] text-white/55">{tool.users} 次装配 · 真实用户提交 · 类别 {tool.category}</p>
           </div>
         </div>
 
@@ -304,7 +412,7 @@ function ChampionDashboard() {
           {[
             { label: "冠军城市", value: city.city, sub: `${city.users} 信号`, icon: MapPin, tone: "#22d3ee" },
             { label: "最高等级", value: `Lv.${String(highest.level).padStart(2, "0")}`, sub: highest.nickname, icon: Trophy, tone: "#fbbf24" },
-            { label: "增长最快", value: fastest.role, sub: `+${fastest.growthRate}%`, icon: TrendingUp, tone: "#10b981" }
+            { label: "热门角色", value: fastest.role, sub: `${fastest.users} 人`, icon: TrendingUp, tone: "#10b981" }
           ].map((it) => {
             const Icon = it.icon;
             return (
@@ -326,41 +434,68 @@ function ChampionDashboard() {
 
 export default function RankingPage() {
   const [tab, setTab] = useState<TabKey>("tools");
+  const [ranking, setRanking] = useState<RankingData | null>(null);
+  const [latestCards, setLatestCards] = useState<LatestCard[]>([]);
 
-  const stats = useMemo(() => {
-    const champTool = TOOL_RANKING[0];
-    const champCity = CITY_RANKING[0];
-    const highestLevel = LATEST_PASSPORTS.reduce((a, b) => (a.level > b.level ? a : b));
-    return [
-      { label: "总上榜玩家", value: MOCK_OVERVIEW.total, icon: Users, tone: "#22d3ee" },
-      { label: "最热工具", value: champTool.name, icon: Swords, tone: "#a855f7", isText: true },
-      { label: "最强城市", value: `${champCity.city} · ${champCity.users}`, icon: MapPin, tone: "#fbbf24", isText: true },
-      { label: "最高等级", value: `Lv.${String(highestLevel.level).padStart(2, "0")}`, icon: Trophy, tone: "#fb7185", isText: true },
-      { label: "本周新增", value: MOCK_OVERVIEW.todayNew * 7, icon: Sparkles, tone: "#10b981" },
-      { label: "增长最快", value: `+${TOOL_RANKING[2].growthRate}%`, icon: TrendingUp, tone: "#06b6d4", isText: true }
-    ];
+  useEffect(() => {
+    let active = true;
+    Promise.all([fetchRanking(), fetchLatestCards(12)])
+      .then(([rankingData, cards]) => {
+        if (!active) return;
+        setRanking(rankingData);
+        setLatestCards(cards);
+      })
+      .catch(() => {
+        if (!active) return;
+        setRanking(null);
+        setLatestCards([]);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
+  const overview = ranking?.overview ?? { total: 0, agentUsers: 0, appUsers: 0, todayNew: 0 };
+  const toolRanking = useMemo(() => toToolRanking(ranking), [ranking]);
+  const cityRanking = useMemo(() => toCityRanking(ranking), [ranking]);
+  const provinceRanking = useMemo(() => toProvinceRanking(ranking), [ranking]);
+  const roleRanking = useMemo(() => toRoleRanking(ranking), [ranking]);
+  const latestPassports = useMemo(() => toLatestPassports(latestCards), [latestCards]);
+
+  const stats = useMemo(() => {
+    const champTool = toolRanking[0];
+    const champCity = cityRanking[0];
+    const highestLevel = latestPassports.reduce((a, b) => (a.level > b.level ? a : b), latestPassports[0] ?? { level: 0 });
+    return [
+      { label: "总上榜玩家", value: overview.total, icon: Users, tone: "#22d3ee" },
+      { label: "最热工具", value: champTool?.name ?? "待点亮", icon: Swords, tone: "#a855f7", isText: true },
+      { label: "最强城市", value: champCity ? `${champCity.city} · ${champCity.users}` : "待点亮", icon: MapPin, tone: "#fbbf24", isText: true },
+      { label: "最高等级", value: `Lv.${String(highestLevel.level).padStart(2, "0")}`, icon: Trophy, tone: "#fb7185", isText: true },
+      { label: "今日新增", value: overview.todayNew, icon: Sparkles, tone: "#10b981" },
+      { label: "热门角色", value: roleRanking[0]?.role ?? "待点亮", icon: TrendingUp, tone: "#06b6d4", isText: true }
+    ];
+  }, [cityRanking, latestPassports, overview.todayNew, overview.total, roleRanking, toolRanking]);
+
   const tabMeta: Record<TabKey, { label: string; icon: typeof Swords; accent: string; total: number }> = {
-    tools: { label: "工具榜", icon: Swords, accent: "#a855f7", total: TOOL_RANKING.length },
-    cities: { label: "城市榜", icon: MapPin, accent: "#22d3ee", total: CITY_RANKING.length },
-    provinces: { label: "省份榜", icon: Shield, accent: "#fbbf24", total: PROVINCE_RANKING.length },
-    roles: { label: "角色榜", icon: Code, accent: "#fb7185", total: ROLE_RANKING.length },
-    latest: { label: "最新身份卡", icon: Hash, accent: "#10b981", total: LATEST_PASSPORTS.length }
+    tools: { label: "工具榜", icon: Swords, accent: "#a855f7", total: toolRanking.length },
+    cities: { label: "城市榜", icon: MapPin, accent: "#22d3ee", total: cityRanking.length },
+    provinces: { label: "省份榜", icon: Shield, accent: "#fbbf24", total: provinceRanking.length },
+    roles: { label: "角色榜", icon: Code, accent: "#fb7185", total: roleRanking.length },
+    latest: { label: "最新身份卡", icon: Hash, accent: "#10b981", total: latestPassports.length }
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden pb-20 pt-4">
+    <main className="relative min-h-screen overflow-hidden pb-16 pt-0">
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute left-[8%] top-[10%] h-[28rem] w-[28rem] rounded-full bg-[rgba(168,85,247,0.20)] blur-[140px]" />
         <div className="absolute right-[6%] top-[16%] h-[26rem] w-[26rem] rounded-full bg-[rgba(251,191,36,0.18)] blur-[130px]" />
         <div className="absolute bottom-0 left-1/2 h-[32rem] w-[32rem] -translate-x-1/2 rounded-full bg-[rgba(0,229,255,0.15)] blur-[140px]" />
       </div>
 
-      <Section className="relative z-10" spacing="md">
+      <Section className="relative z-10" spacing="sm">
         <PageShell width="wide">
           {/* HERO */}
-          <section className="mb-10 grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-stretch">
+          <section className="grid gap-8 pb-10 pt-6 lg:min-h-[540px] lg:grid-cols-[1fr_500px] lg:items-center">
             <motion.div initial={false} className="flex flex-col justify-center space-y-6">
               <div className="inline-flex items-center gap-2.5 rounded-full border border-cyan-300/20 bg-cyan-300/[0.05] px-4 py-2 backdrop-blur-xl">
                 <Trophy className="h-4 w-4 text-cyan-300" />
@@ -386,17 +521,17 @@ export default function RankingPage() {
               </div>
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-3 text-[11px] text-white/45">
                 <span className="flex items-center gap-1.5"><Crown className="h-3 w-3 text-amber-300" /> 实时更新</span>
-                <span className="flex items-center gap-1.5"><Hash className="h-3 w-3 text-cyan-300" /> {MOCK_OVERVIEW.total} 名玩家入榜</span>
+                <span className="flex items-center gap-1.5"><Hash className="h-3 w-3 text-cyan-300" /> {overview.total} 名玩家入榜</span>
                 <span className="flex items-center gap-1.5"><Brain className="h-3 w-3 text-violet-300" /> 5 大分区实时切换</span>
               </div>
             </motion.div>
             <motion.div initial={false}>
-              <ChampionDashboard />
+              <ChampionDashboard tools={toolRanking} cities={cityRanking} latest={latestPassports} roles={roleRanking} />
             </motion.div>
           </section>
 
           {/* TOP STATS 6 cards */}
-          <section className="mb-12 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+          <section className="mb-10 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
             {stats.map((s) => {
               const Icon = s.icon;
               return (
@@ -417,8 +552,8 @@ export default function RankingPage() {
           </section>
 
           {/* TABS */}
-          <section className="mb-12">
-            <LiquidGlassCard className="p-5 sm:p-6" mode="shader" blurAmount={0.05} aberrationIntensity={1.5} cornerRadius={26}>
+          <section className="mb-10">
+            <StablePanel>
               <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <p className="title-font text-[10px] uppercase tracking-[0.28em] text-cyan-300/70">Leaderboard Panels</p>
@@ -457,16 +592,16 @@ export default function RankingPage() {
 
               {tab === "tools" && (
                 <div className="space-y-2.5">
-                  {TOOL_RANKING.map((t, i) => (
+                  {toolRanking.length === 0 && <EmptyRealData label="工具榜" />}
+                  {toolRanking.map((t, i) => (
                     <RowShell
                       key={t.id}
                       rank={i + 1}
                       primary={t.name}
-                      secondary={`${t.category} 阵营 · 增长 +${t.growthRate}%`}
+                      secondary={`${t.category} 阵营 · 来自真实身份卡`}
                       badge={t.category}
                       value={t.users}
                       energy={t.heat}
-                      growth={t.growthRate}
                       accent={toolColor(t.name)}
                       isTop3={i < 3}
                     />
@@ -476,7 +611,8 @@ export default function RankingPage() {
 
               {tab === "cities" && (
                 <div className="space-y-2.5">
-                  {CITY_RANKING.map((c, i) => (
+                  {cityRanking.length === 0 && <EmptyRealData label="城市榜" />}
+                  {cityRanking.map((c, i) => (
                     <RowShell
                       key={c.id}
                       rank={i + 1}
@@ -484,7 +620,6 @@ export default function RankingPage() {
                       secondary={`${c.province} · 主流角色 ${c.topRole} · 主流工具 ${c.topTool}`}
                       value={c.users}
                       energy={Math.min(100, c.users / 2)}
-                      growth={c.growthRate}
                       accent="#22d3ee"
                       isTop3={i < 3}
                     />
@@ -494,7 +629,8 @@ export default function RankingPage() {
 
               {tab === "provinces" && (
                 <div className="space-y-2.5">
-                  {PROVINCE_RANKING.map((p, i) => (
+                  {provinceRanking.length === 0 && <EmptyRealData label="省份榜" />}
+                  {provinceRanking.map((p, i) => (
                     <RowShell
                       key={p.id}
                       rank={i + 1}
@@ -502,7 +638,6 @@ export default function RankingPage() {
                       secondary={`${p.cityCount} 城市覆盖 · 最热工具 ${p.topTool}`}
                       value={p.users}
                       energy={Math.min(100, p.users / 3.2)}
-                      growth={p.growthRate}
                       accent="#fbbf24"
                       isTop3={i < 3}
                     />
@@ -512,7 +647,8 @@ export default function RankingPage() {
 
               {tab === "roles" && (
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  {ROLE_RANKING.map((r, i) => (
+                  {roleRanking.length === 0 && <EmptyRealData label="角色榜" />}
+                  {roleRanking.map((r, i) => (
                     <RoleCard key={r.id} r={r} rank={i + 1} isTop3={i < 3} />
                   ))}
                 </div>
@@ -520,12 +656,13 @@ export default function RankingPage() {
 
               {tab === "latest" && (
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                  {LATEST_PASSPORTS.map((p, i) => (
+                  {latestPassports.length === 0 && <EmptyRealData label="最新身份卡" />}
+                  {latestPassports.map((p, i) => (
                     <PassportMiniCard key={p.id} p={p} rank={i + 1} />
                   ))}
                 </div>
               )}
-            </LiquidGlassCard>
+            </StablePanel>
           </section>
 
           {/* BOTTOM CTA */}

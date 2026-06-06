@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ChevronRight } from "lucide-react";
-import LiquidGlassCard from "@/components/react-bits/LiquidGlassCard";
+import { ChevronRight, MapPin, Radio, Shield } from "lucide-react";
 import { generateAvatarSvg } from "@/lib/avatar";
 import { fetchLatestCards, type LatestCard } from "@/lib/api-client";
 
@@ -15,80 +14,99 @@ type Props = {
   ctaLabel?: string;
 };
 
+function normalizeCards(cards: LatestCard[]) {
+  return cards.slice(0, 4);
+}
+
 export default function LatestCardStream({ title, eyebrow = "Latest Signals", ctaHref = "/share", ctaLabel = "查看分享页" }: Props) {
   const [cards, setCards] = useState<LatestCard[]>([]);
-  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     let active = true;
     fetchLatestCards(12)
       .then((data) => {
-        if (active) setCards(data);
+        if (active) setCards(normalizeCards(data));
       })
-      .catch(() => {})
-      .finally(() => {
-        if (active) setLoaded(true);
-      });
+      .catch(() => {});
     return () => {
       active = false;
     };
   }, []);
 
-  const list = cards.slice(0, 4);
+  const list = normalizeCards(cards);
 
   return (
-    <div>
-      <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mb-8 flex items-end justify-between gap-4">
+    <div className="relative overflow-hidden rounded-[24px] border border-cyan-300/14 bg-[linear-gradient(135deg,rgba(15,23,42,0.78),rgba(2,6,23,0.66))] p-5 shadow-[0_0_40px_rgba(34,211,238,0.10)] backdrop-blur-xl sm:p-6">
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:28px_28px] opacity-25" />
+      <motion.div initial={false} className="relative z-10 mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="title-font mb-3 text-[10px] font-semibold uppercase tracking-[0.3em] text-[#00ffc8]/60">{eyebrow}</p>
+          <p className="title-font mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.28em] text-cyan-300/70">
+            <Radio className="h-3.5 w-3.5" />
+            {eyebrow}
+          </p>
           <h2 className="title-font text-2xl font-black tracking-wide text-white sm:text-3xl">{title}</h2>
+          <p className="mt-2 text-sm text-slate-400">最近生成的 Agent Passport 会写入这里，持续点亮全国信号。</p>
         </div>
-        <Link href={ctaHref} className="hidden items-center gap-1 text-sm tracking-wider text-white/40 transition-colors hover:text-[#00ffc8] sm:flex">
-          {ctaLabel} <ChevronRight className="h-4 w-4" />
+        <Link href={ctaHref} className="inline-flex items-center gap-1 self-start rounded-full border border-cyan-300/16 bg-cyan-300/[0.06] px-4 py-2 text-sm font-semibold text-cyan-200 transition hover:border-cyan-300/35 hover:bg-cyan-300/[0.10] sm:self-auto">
+          {ctaLabel}
+          <ChevronRight className="h-4 w-4" />
         </Link>
       </motion.div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {list.length > 0 ? (
-          list.map((card, index) => (
-            <motion.div key={`${card.card_slug || card.nickname}-${index}`} initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: index * 0.06 }}>
-              <Link href={card.card_slug ? `/share?slug=${card.card_slug}` : "/share"} className="block">
-                <LiquidGlassCard className="h-full p-5" mode="standard" blurAmount={0.05} aberrationIntensity={1.1} cornerRadius={24}>
-                  <div className="mb-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="h-14 w-14 overflow-hidden rounded-[18px] border border-white/[0.04] bg-black/30" dangerouslySetInnerHTML={{ __html: generateAvatarSvg(card.avatar_seed, 56, card.ai_level, card.primary_tool) }} />
-                      <div>
-                        <p className="font-semibold text-white">{card.nickname}</p>
-                        <p className="text-xs text-white/40">{card.ai_level_name}</p>
-                      </div>
-                    </div>
-                    <span className="rounded-full border border-cyan-300/15 bg-cyan-300/[0.05] px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] text-cyan-300/80">L{card.ai_level}</span>
-                  </div>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center justify-between gap-3"><span className="text-white/38">主力装备</span><span className="font-medium text-white">{card.primary_tool}</span></div>
-                    <div className="flex items-center justify-between gap-3"><span className="text-white/38">地区据点</span><span className="font-medium text-white">{card.province}</span></div>
-                  </div>
-                </LiquidGlassCard>
-              </Link>
-            </motion.div>
-          ))
-        ) : (
-          <div className="md:col-span-2 xl:col-span-4">
-            <div className="rounded-2xl border border-white/[0.05] bg-white/[0.01] p-8 text-center">
-              {loaded ? (
-                <>
-                  <p className="text-base font-semibold text-white">还没有玩家写入身份卡</p>
-                  <p className="mt-3 text-sm leading-7 text-white/45">成为全国第一位 Agent 玩家，点亮第一条信号。</p>
-                  <div className="mt-5 flex justify-center">
-                    <Link href="/survey" className="btn-lusion !px-5 !py-3 !text-xs">立即生成身份卡</Link>
-                  </div>
-                </>
-              ) : (
-                <p className="text-sm text-white/40">正在读取最新信号...</p>
-              )}
-            </div>
+      <div className="relative z-10 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {list.length === 0 && (
+          <div className="col-span-full rounded-2xl border border-cyan-300/12 bg-cyan-300/[0.04] p-8 text-center text-sm text-cyan-100/75">
+            暂无真实身份卡信号。用户完成身份卡生成后，最新记录会自动出现在这里。
           </div>
         )}
+        {list.map((card, index) => (
+          <motion.div
+            key={`${card.card_slug || card.nickname}-${index}`}
+            initial={false}
+          >
+            <Link
+              href={card.card_slug ? `/share?slug=${card.card_slug}` : "/share"}
+              className="group block h-full"
+            >
+              <article className="flex h-full min-h-[180px] flex-col rounded-2xl border border-white/[0.08] bg-black/30 p-4 transition hover:-translate-y-0.5 hover:border-cyan-300/24 hover:bg-black/40">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div
+                      className="h-14 w-14 shrink-0 overflow-hidden rounded-[18px] border border-cyan-300/14 bg-black/50"
+                      dangerouslySetInnerHTML={{ __html: generateAvatarSvg(card.avatar_seed, 56, card.ai_level, card.primary_tool) }}
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-white">{card.nickname || "匿名 Agent"}</p>
+                      <p className="mt-0.5 truncate text-xs text-slate-400">{card.ai_level_name || `Lv.${card.ai_level}`}</p>
+                    </div>
+                  </div>
+                  <span className="shrink-0 rounded-full border border-cyan-300/18 bg-cyan-300/[0.07] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-200">
+                    Lv.{card.ai_level}
+                  </span>
+                </div>
+                <div className="mt-4 space-y-2 text-sm">
+                  <div className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.05] bg-white/[0.02] px-3 py-2">
+                    <span className="flex items-center gap-1.5 text-slate-400">
+                      <Shield className="h-3.5 w-3.5 text-cyan-300" />
+                      主力装备
+                    </span>
+                    <span className="truncate font-semibold text-white">{card.primary_tool || "Codex"}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.05] bg-white/[0.02] px-3 py-2">
+                    <span className="flex items-center gap-1.5 text-slate-400">
+                      <MapPin className="h-3.5 w-3.5 text-emerald-300" />
+                      地区据点
+                    </span>
+                    <span className="truncate font-semibold text-white">{card.province || "浙江"}</span>
+                  </div>
+                </div>
+                <div className="mt-auto pt-3">
+                  <span className="text-[10px] uppercase tracking-[0.22em] text-slate-500">Signal #{String(index + 1).padStart(2, "0")}</span>
+                </div>
+              </article>
+            </Link>
+          </motion.div>
+        ))}
       </div>
     </div>
   );
