@@ -134,47 +134,7 @@ export async function updateRow(env, cardId, payload) {
 export function buildIdentityCardPrompt(input, cardId) {
   const region = input.city ? `${input.province}${input.city}` : input.province;
   const tools = input.tools.join(" / ");
-  return `
-生成一张竖版 4:5 的中文 AI Agent 身份卡，尺寸适配 1824x2272。
-
-这是一张完整的社交分享身份卡，不是头像图，不要生成真人头像，不要生成卡通人物中心位。
-
-主题：
-AI Agent Map
-全国 AI 信号身份卡
-
-用户信息：
-昵称：${input.nickname}
-ID：${cardId}
-地区：${region}
-正在使用的 AI 工具：${tools}
-签名：${input.signature}
-
-请把以上用户信息自然排版到卡片中。
-
-视觉风格：
-轻赛博、现代信息图、数字通行证、中国地图信号卡、科技数据面板。
-
-画面元素：
-中国地图轮廓或抽象地图信号纹理、城市信号点、数据流线、科技边框、发光坐标、工具标签、身份编号感装饰。
-
-卡片文字必须包含：
-AI Agent Map
-全国 AI 信号身份卡
-昵称：${input.nickname}
-ID：${cardId}
-地区：${region}
-工具：${tools}
-签名：${input.signature}
-我已点亮 AI Agent Map
-liusq.icu
-
-设计要求：
-画面高级、干净、明亮、有科技感，适合朋友圈、微博、小红书分享。
-不要大面积纯黑，不要黑白单调，不要真实人脸，不要大头像，不要二维码，不要复杂小字，不要乱码，不要低幼卡通风。
-
-请生成一张完整、好看、可下载、可分享的 AI Agent 身份卡。
-  `.trim();
+  return `生成一张竖版 4:5 的中文 AI Agent 身份卡图片，包含标题：AI Agent Map、AI Agent 身份卡、昵称：${input.nickname}、ID：${cardId}、地区：${region}、工具：${tools}、签名：${input.signature}、liusq.icu。视觉元素：轻赛博、现代信息卡、蓝紫渐变、抽象地图轮廓、发光城市点、科技边框。不要人物头像，不要真人，不要二维码。`;
 }
 
 export async function generateWithSenseNova(apiKey, prompt) {
