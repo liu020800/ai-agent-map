@@ -125,6 +125,46 @@ Do not write Wrangler tokens, Cloudflare API tokens, GitHub tokens, Supabase key
 
 Keep deployment credentials in local environment variables or a private secret manager.
 
+Required Cloudflare Pages variables:
+
+```txt
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY
+SENSENOVA_API_KEY
+NEXT_PUBLIC_SITE_URL
+```
+
+`SUPABASE_SERVICE_ROLE_KEY` and `SENSENOVA_API_KEY` must be configured as secrets. They must not be exposed in client code.
+
+## Agent Card Persistence
+
+Identity cards use the existing Supabase `users` table as the first production persistence layer:
+
+- `card_slug` stores the public `cardId`.
+- `visitor_hash` stores a hashed browser visitor ID.
+- `avatar_seed` stores the generated card image URL.
+- `usage_frequency` stores the user signature.
+- `usage_purpose` stores selected scenarios.
+
+Card creation and regeneration are the only routes that call SenseNova:
+
+```txt
+POST /api/cards/create
+POST /api/cards/:cardId/regenerate
+```
+
+Read-only routes never call the image model:
+
+```txt
+GET /api/cards/:cardId
+GET /api/cards/by-visitor/:visitorId
+GET /api/cards/search?nickname=xxx
+GET /card/:cardId
+```
+
+Future migration can move card records from `users` to a dedicated `agent_cards` table or object storage. Keep the API response shape stable when migrating.
+
 ## Future Git Auto Deployment
 
 If the project should deploy automatically after `git push`, recreate or reconfigure the Cloudflare Pages project to connect the GitHub repository:

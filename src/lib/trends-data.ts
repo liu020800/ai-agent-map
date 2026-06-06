@@ -71,14 +71,18 @@ function labelFor(heat: number, direction: TrendDirection): TrendsMatrix["label"
 }
 
 function buildMatrix(tools: ToolTrend[]): TrendsMatrix[] {
+  if (!tools.length) return [];
   const toolMap = new Map(tools.map((tool) => [tool.name, tool.users]));
-  const max = Math.max(...tools.map((tool) => tool.users), 1);
-  return MATRIX_DEFS.map((m) => {
-    const users = m.tools.reduce((sum, tool) => sum + (toolMap.get(tool) ?? 0), 0);
-    const heat = Math.round((users / max) * 100);
-    const direction = heat > 0 ? "stable" : "down";
+  const matrixValues = MATRIX_DEFS.map((definition) => ({
+    definition,
+    users: definition.tools.reduce((sum, tool) => sum + (toolMap.get(tool) ?? 0), 0),
+  }));
+  const maxMatrixUsers = Math.max(...matrixValues.map((item) => item.users), 1);
+  return matrixValues.map(({ definition, users }) => {
+    const heat = users > 0 ? Math.min(100, Math.round((users / maxMatrixUsers) * 100)) : 0;
+    const direction = users > 0 ? "stable" : "down";
     return {
-    ...m,
+    ...definition,
     heat,
     direction,
     label: labelFor(heat, direction),
@@ -105,7 +109,7 @@ function buildEmptySnapshot(): TrendsSnapshot {
     totalTools: 0,
     agentShare: 0,
     tools: [],
-    matrix: buildMatrix([]),
+    matrix: [],
     timeline: [],
     roleDistribution: [],
   };

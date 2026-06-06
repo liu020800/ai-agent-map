@@ -51,6 +51,7 @@ export default function HomePage() {
               <p className="section-desc mt-3">把鼠标移到卡上,看每件装备的霓虹辉光。</p>
             </div>
             <Link href="/ranking" className="btn-rb-ghost"><Trophy className="h-4 w-4" /><span>查看完整榜单</span></Link>
+            <Link href="/share" className="btn-rb-ghost"><Sparkles className="h-4 w-4" /><span>找回身份卡</span></Link>
           </div>
           {displayTools.length === 0 ? (
             <div className="rounded-3xl border border-cyan-300/12 bg-cyan-300/[0.04] p-8 text-center text-sm text-cyan-100/75">

@@ -1,6 +1,7 @@
 "use client";
 
 import Navbar from "@/components/navbar";
+import Link from "next/link";
 
 export default function ClientShell({ children }: { children: React.ReactNode }) {
   return (
@@ -15,6 +16,18 @@ export default function ClientShell({ children }: { children: React.ReactNode })
       <div className="pt-20">
         {children}
       </div>
+      <footer className="border-t border-white/10 bg-black/30 px-4 py-8 text-center text-xs text-white/45">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 sm:flex-row">
+          <p>AI 生成内容 · 仅供娱乐和分享，不代表真实身份认证。</p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Link href="/privacy" className="hover:text-cyan-200">隐私政策</Link>
+            <span>·</span>
+            <Link href="/terms" className="hover:text-cyan-200">用户协议</Link>
+            <span>·</span>
+            <a href="mailto:Liusq9428@gmail.com" className="hover:text-cyan-200">联系反馈</a>
+          </div>
+        </div>
+      </footer>
     </>
   );
 }

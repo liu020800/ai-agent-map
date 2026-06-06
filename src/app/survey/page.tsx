@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { toPng } from "html-to-image";
@@ -34,12 +34,20 @@ import {
   deriveRole,
   deriveAgentLevel,
   deriveSignalStrength,
-  submitSurvey,
   generateIdentityCard,
   generateIdentityId,
 } from "@/lib/survey-service";
 import { toolColor } from "@/data/mock";
-import { generateAiIdentityCard } from "@/lib/api-client";
+import {
+  createCardAndGenerateImage,
+  getCardById,
+  getCardByVisitorId,
+  getOrCreateVisitorId,
+  readCachedAgentCard,
+  searchCardsByNickname,
+  STORAGE_KEYS,
+  type AgentCardRecord,
+} from "@/lib/api-client";
 import type { SurveyFormPayload } from "@/lib/types";
 
 type Step = 1 | 2 | 3 | 4;
@@ -70,9 +78,32 @@ export default function SurveyPage() {
   const [createdAt, setCreatedAt] = useState<string>(new Date().toISOString());
   const [downloaded, setDownloaded] = useState(false);
   const [copied, setCopied] = useState<"text" | "link" | null>(null);
+  const [existingCard, setExistingCard] = useState<AgentCardRecord | null>(null);
+  const [recoverNickname, setRecoverNickname] = useState("");
+  const [recoverResults, setRecoverResults] = useState<AgentCardRecord[]>([]);
+  const [checkingExisting, setCheckingExisting] = useState(true);
   const [cardSeed, setCardSeed] = useState<string>(() =>
     typeof window === "undefined" ? "" : Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
   );
+
+  useEffect(() => {
+    let active = true;
+    const visitorId = getOrCreateVisitorId();
+    const cached = readCachedAgentCard();
+    if (cached && active) setExistingCard(cached);
+    const cardId = typeof window !== "undefined" ? window.localStorage.getItem(STORAGE_KEYS.cardId) : "";
+    const task = cardId ? getCardById(cardId) : getCardByVisitorId(visitorId);
+    task.then((card) => {
+      if (!active) return;
+      if (card) setExistingCard(card);
+      setCheckingExisting(false);
+    }).catch(() => {
+      if (active) setCheckingExisting(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const role = useMemo(() => deriveRole(scenarios), [scenarios]);
   const level = useMemo(() => deriveAgentLevel(tools, userType), [tools, userType]);
@@ -140,17 +171,26 @@ export default function SurveyPage() {
     setSubmitStatus("loading");
     setSubmitMessage("正在提交...");
     try {
-      const payload = buildPayload();
-      const response = await submitSurvey(payload);
-      setIdentityId(response.identityId);
-      setCreatedAt(response.createdAt);
+      const visitorId = getOrCreateVisitorId();
+      const card = await createCardAndGenerateImage({
+        visitorId,
+        nickname: nickname.trim() || "匿名 Agent",
+        province,
+        city: city.trim(),
+        tools,
+        scenarios,
+        signature: signature.trim() || "用 AI 扩展自己的能力边界",
+      });
+      setExistingCard(card);
+      setIdentityId(card.cardId);
+      setCreatedAt(card.createdAt);
       setSubmitStatus("success");
       setSubmitMessage("已写入 AI Agent Map 全国图谱！");
     } catch (err) {
       setSubmitStatus("error");
       setSubmitMessage(err instanceof Error ? err.message : "提交失败，请重试");
     }
-  }, [buildPayload]);
+  }, [city, nickname, province, scenarios, signature, tools]);
 
   const regenerateAvatar = useCallback(() => {
     setCardSeed(Date.now().toString(36) + Math.random().toString(36).slice(2, 8));
@@ -197,88 +237,113 @@ export default function SurveyPage() {
   }, [role.title, nickname, tools, provinceText, signal]);
 
 
-type LatestPassportCard = {
-  id: string;
-  nickname: string;
-  ai_level: number;
-  ai_level_name: string;
-  primary_tool: string;
-  tools: string[];
-  avatar_seed: string;
-  province: string;
-  city: string;
-  created_at: string;
-  user_number: number;
-  roleTitle: string;
-  rarity: string;
-  signalStrength: number;
-  signature: string;
-  scenarios: string[];
-  generatedCardImageUrl?: string;
-  generatedCardShareText?: string;
-};
-
-const savePassportToStorage = (card: LatestPassportCard) => {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem("ai-agent-passport-current", JSON.stringify(card));
-  } catch {
-    /* ignore quota errors */
-  }
-};
-
   const handleGenerateAndShare = useCallback(async () => {
     setSubmitStatus("loading");
-    setSubmitMessage("正在生成专属 AI Agent 身份卡图片...");
-    let newId = identityId;
-    let newCreated = createdAt;
+    setSubmitMessage("正在创建并保存专属 AI Agent 身份卡...");
     try {
-      const result = await submitSurvey(buildPayload());
-      newId = result.identityId;
-      newCreated = result.createdAt;
-      setIdentityId(newId);
-      setCreatedAt(newCreated);
-    } catch {
-      /* still proceed with local identity */
+      const card = await createCardAndGenerateImage({
+        visitorId: getOrCreateVisitorId(),
+        nickname: (nickname || "").trim() || "匿名 Agent",
+        province,
+        city: (city || "").trim(),
+        tools,
+        scenarios: SURVEY_SCENARIOS.filter((s) => scenarios.includes(s.id)).map((s) => s.name),
+        signature: (signature || "").trim() || "用 AI 扩展自己的能力边界",
+      });
+      setExistingCard(card);
+      setIdentityId(card.cardId);
+      setCreatedAt(card.createdAt);
+      setSubmitStatus("success");
+      setSubmitMessage("身份卡已生成并保存，正在跳转到分享页...");
+      setTimeout(() => {
+        if (typeof window !== "undefined") window.location.href = `/share?cardId=${encodeURIComponent(card.cardId)}`;
+      }, 500);
+    } catch (error) {
+      setSubmitStatus("error");
+      setSubmitMessage(error instanceof Error ? error.message : "身份卡创建失败，请重试");
     }
-    const scenarioNames = SURVEY_SCENARIOS.filter((s) => scenarios.includes(s.id)).map((s) => s.name);
-    const aiCard = await generateAiIdentityCard({
-      nickname: (nickname || "").trim() || "匿名 Agent",
-      province,
-      city: (city || "").trim(),
-      tools,
-      signature: (signature || "").trim() || "用 AI 扩展自己的能力边界",
-    });
+  }, [city, nickname, province, scenarios, signature, tools]);
 
-    const card: LatestPassportCard = {
-      id: newId,
-      nickname: (nickname || "").trim() || "匿名 Agent",
-      ai_level: level,
-      ai_level_name: rarityName,
-      primary_tool: tools[0] || "未装配",
-      tools: [...tools],
-      avatar_seed: avatarSeed,
-      province,
-      city: (city || "").trim(),
-      created_at: newCreated,
-      user_number: Math.floor(Math.random() * 9000) + 1000,
-      roleTitle: role.title,
-      rarity: rarityName,
-      signalStrength: signal,
-      signature: (signature || "").trim() || "用 AI 扩展自己的能力边界",
-      scenarios: scenarioNames,
-      generatedCardImageUrl: aiCard?.imageUrl,
-      generatedCardShareText: aiCard?.shareText,
-    };
-    savePassportToStorage(card);
-    setSubmitStatus("success");
-    setSubmitMessage(aiCard?.imageUrl ? "已生成 AI Agent 身份卡图片！正在跳转到分享页..." : "已生成身份卡数据，图片生成暂不可用，正在跳转到分享页...");
-    setTimeout(() => {
-      if (typeof window !== "undefined") {
-        window.location.href = "/share";
-      }
-    }, 700);
-  }, [buildPayload, identityId, createdAt, nickname, level, rarityName, tools, avatarSeed, province, city, role.title, signal, signature, scenarios]);
+  const handleRecoverSearch = useCallback(async () => {
+    if (!recoverNickname.trim()) return;
+    setSubmitStatus("loading");
+    setSubmitMessage("正在查询身份卡...");
+    try {
+      const results = await searchCardsByNickname(recoverNickname.trim());
+      setRecoverResults(results);
+      setSubmitStatus("idle");
+      setSubmitMessage(results.length ? `找到 ${results.length} 张身份卡` : "没有找到匹配身份卡");
+    } catch (error) {
+      setSubmitStatus("error");
+      setSubmitMessage(error instanceof Error ? error.message : "查询失败，请稍后再试");
+    }
+  }, [recoverNickname]);
+
+  if (existingCard && !checkingExisting) {
+    return (
+      <main className="relative min-h-screen overflow-hidden pb-16 pt-0">
+        <Section className="relative z-10" spacing="sm">
+          <PageShell>
+            <div className="mx-auto max-w-3xl rounded-[28px] border border-cyan-300/20 bg-black/40 p-6 text-center shadow-[0_0_54px_rgba(34,211,238,0.12)] backdrop-blur-xl sm:p-8">
+              <p className="title-font text-[11px] uppercase tracking-[0.32em] text-cyan-300">MY AGENT CARD</p>
+              <h1 className="title-font mt-4 text-3xl font-black text-white sm:text-5xl">你已经拥有 AI Agent 身份卡</h1>
+              <p className="mt-4 text-sm leading-7 text-white/65">
+                为避免重复消耗生图额度，系统已识别到你的浏览器身份。刷新或再次进入不会重新生成图片。
+              </p>
+              <div className="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-black/50">
+                {existingCard.imageUrl ? (
+                  <img src={existingCard.imageUrl} alt={`${existingCard.nickname} 的 AI Agent 身份卡`} className="mx-auto max-h-[520px] w-full object-contain" />
+                ) : (
+                  <div className="p-10 text-white/60">身份卡图片暂不可用</div>
+                )}
+              </div>
+              <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                <Link href={`/share?cardId=${encodeURIComponent(existingCard.cardId)}`} className="btn-rb-fill justify-center">
+                  查看我的身份卡
+                </Link>
+                <button
+                  type="button"
+                  className="btn-rb-ghost justify-center"
+                  onClick={() => navigator.clipboard?.writeText(existingCard.shareUrl)}
+                >
+                  复制分享链接
+                </button>
+                <button
+                  type="button"
+                  className="btn-rb-ghost justify-center"
+                  onClick={() => {
+                    if (window.confirm("重新生成会消耗一次图片生成额度，并替换当前身份卡。请前往分享页继续，确定打开吗？")) {
+                      window.location.href = `/share?cardId=${encodeURIComponent(existingCard.cardId)}&regen=1`;
+                    }
+                  }}
+                >
+                  重新生成身份卡
+                </button>
+              </div>
+              <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                <p className="mb-3 text-sm font-semibold text-white">查询其他身份卡</p>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input value={recoverNickname} onChange={(e) => setRecoverNickname(e.target.value)} placeholder="输入昵称找回身份卡" className="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none focus:border-cyan-300/40" />
+                  <button type="button" onClick={handleRecoverSearch} className="btn-rb-ghost justify-center">查询</button>
+                </div>
+                {recoverResults.length > 0 && (
+                  <div className="mt-3 grid gap-2 text-left">
+                    {recoverResults.map((card) => (
+                      <Link key={card.cardId} href={`/share?cardId=${encodeURIComponent(card.cardId)}`} className="rounded-xl border border-white/10 bg-black/30 p-3 text-sm text-white/75 hover:border-cyan-300/30">
+                        {card.nickname} · {card.province}{card.city} · {card.cardId}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {submitMessage && <p className="mt-4 text-sm text-cyan-100/75">{submitMessage}</p>}
+              <p className="mt-5 text-xs text-white/35">AI 生成内容 · 仅供娱乐分享，不代表真实身份认证。</p>
+            </div>
+          </PageShell>
+        </Section>
+      </main>
+    );
+  }
 
     return (
     <main className="relative min-h-screen overflow-hidden pb-16 pt-0">

@@ -360,6 +360,11 @@ export default function TrendsPage() {
             />
 
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {snapshot.matrix.length === 0 && (
+                <div className="col-span-full rounded-2xl border border-violet-300/12 bg-violet-300/[0.04] p-6 text-center text-sm text-violet-100/75">
+                  暂无真实趋势矩阵数据。用户生成身份卡后，系统会按工具使用场景自动计算矩阵热度。
+                </div>
+              )}
               {snapshot.matrix.map((cell) => {
                 const Icon = MATRIX_ICON[cell.id] ?? Sparkles;
                 const tone = MATRIX_TONE[cell.id] ?? { accent: "#22d3ee", bg: "rgba(34,211,238,0.10)", border: "rgba(34,211,238,0.32)" };

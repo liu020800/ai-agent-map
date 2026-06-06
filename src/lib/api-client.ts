@@ -21,6 +21,12 @@
 import { supabase } from "./supabase";
 import { computeLevel, levelName } from "./level";
 
+export const STORAGE_KEYS = {
+  visitorId: "ai_agent_map_visitor_id",
+  cardId: "ai_agent_map_card_id",
+  cardCache: "ai_agent_map_card_cache",
+} as const;
+
 export type ToolEntry = { name: string; count: number };
 export type ProvinceEntry = { name: string; value: number };
 export type CityEntry = { city: string; province: string; count: number; topTool: string; topRole: string };
@@ -505,6 +511,128 @@ export type GenerateCardImageResult = {
   imageUrl: string;
   shareText: string;
 };
+
+export type AgentCardRecord = {
+  cardId: string;
+  visitorId: string;
+  nickname: string;
+  province: string;
+  city?: string;
+  tools: string[];
+  scenarios?: string[];
+  signature?: string;
+  imageUrl: string;
+  imagePath?: string;
+  modelImageUrl?: string;
+  shareTitle: string;
+  shareDescription: string;
+  shareImageUrl: string;
+  shareUrl: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateAgentCardPayload = {
+  visitorId: string;
+  nickname: string;
+  province: string;
+  city?: string;
+  tools: string[];
+  scenarios?: string[];
+  signature?: string;
+};
+
+type AgentCardResponse = { success?: boolean; card?: AgentCardRecord | null; cards?: AgentCardRecord[]; error?: string; reused?: boolean };
+
+export function getOrCreateVisitorId(): string {
+  if (typeof window === "undefined") return "";
+  const stored = window.localStorage.getItem(STORAGE_KEYS.visitorId);
+  if (stored) return stored;
+  const id = typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `visitor-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  window.localStorage.setItem(STORAGE_KEYS.visitorId, id);
+  return id;
+}
+
+export function cacheAgentCard(card: AgentCardRecord) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(STORAGE_KEYS.cardId, card.cardId);
+  window.localStorage.setItem(STORAGE_KEYS.cardCache, JSON.stringify(card));
+  window.localStorage.setItem("ai-agent-passport-current", JSON.stringify({
+    id: card.cardId,
+    nickname: card.nickname,
+    province: card.province,
+    city: card.city,
+    tools: card.tools,
+    scenarios: card.scenarios,
+    signature: card.signature,
+    generatedCardImageUrl: card.imageUrl,
+    generatedCardShareText: card.shareDescription,
+    created_at: card.createdAt,
+  }));
+}
+
+export function readCachedAgentCard(): AgentCardRecord | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEYS.cardCache);
+    return raw ? (JSON.parse(raw) as AgentCardRecord) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function parseAgentCardResponse(res: Response): Promise<AgentCardResponse> {
+  const body = (await res.json()) as AgentCardResponse;
+  if (!res.ok || body.success === false) throw new Error(body.error || "身份卡请求失败");
+  return body;
+}
+
+export async function createCardAndGenerateImage(payload: CreateAgentCardPayload): Promise<AgentCardRecord> {
+  const res = await fetch("/api/cards/create", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const body = await parseAgentCardResponse(res);
+  if (!body.card) throw new Error("身份卡创建失败");
+  cacheAgentCard(body.card);
+  return body.card;
+}
+
+export async function getCardById(cardId: string): Promise<AgentCardRecord | null> {
+  const res = await fetch(`/api/cards/${encodeURIComponent(cardId)}`, { headers: { Accept: "application/json" } });
+  if (res.status === 404) return null;
+  const body = await parseAgentCardResponse(res);
+  if (body.card) cacheAgentCard(body.card);
+  return body.card ?? null;
+}
+
+export async function getCardByVisitorId(visitorId: string): Promise<AgentCardRecord | null> {
+  const res = await fetch(`/api/cards/by-visitor/${encodeURIComponent(visitorId)}`, { headers: { Accept: "application/json" } });
+  const body = await parseAgentCardResponse(res);
+  if (body.card) cacheAgentCard(body.card);
+  return body.card ?? null;
+}
+
+export async function searchCardsByNickname(nickname: string): Promise<AgentCardRecord[]> {
+  const res = await fetch(`/api/cards/search?nickname=${encodeURIComponent(nickname)}`, { headers: { Accept: "application/json" } });
+  const body = await parseAgentCardResponse(res);
+  return body.cards ?? [];
+}
+
+export async function regenerateCardImage(cardId: string, visitorId: string): Promise<AgentCardRecord> {
+  const res = await fetch(`/api/cards/${encodeURIComponent(cardId)}/regenerate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ visitorId }),
+  });
+  const body = await parseAgentCardResponse(res);
+  if (!body.card) throw new Error("重新生成失败");
+  cacheAgentCard(body.card);
+  return body.card;
+}
 
 export async function generateAiIdentityCard(payload: GenerateCardImagePayload): Promise<GenerateCardImageResult | null> {
   try {
