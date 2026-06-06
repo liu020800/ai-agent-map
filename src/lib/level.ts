@@ -1,5 +1,14 @@
-const APP_TOOLS = new Set(["豆包", "DeepSeek", "Kimi", "ChatGPT", "Claude", "Gemini", "通义千问", "腾讯元宝"]);
-const AGENT_TOOLS = new Set(["OpenClaw", "Hermes", "Codex", "Claude Code", "OpenCode", "Cursor", "Dify", "n8n", "Trae", "CodeBuddy"]);
+const APP_TOOLS = new Set([
+  "ChatGPT", "Claude", "Gemini", "DeepSeek", "豆包", "Kimi", "通义千问", "腾讯元宝", "文心一言",
+  "Perplexity", "Grok", "Poe", "Genspark", "NotebookLM", "Gamma", "Napkin AI", "Monica",
+  "Midjourney", "即梦 AI", "可灵 AI", "Runway",
+]);
+const AGENT_TOOLS = new Set([
+  "Codex", "Claude Code", "OpenCode", "OpenClaw", "Hermes", "Cursor", "Windsurf", "Trae", "CodeBuddy",
+  "GitHub Copilot", "Replit Agent", "v0", "Bolt.new", "Lovable", "Manus",
+  "Dify", "扣子 / Coze", "LangChain", "LlamaIndex", "Flowise", "n8n", "Make", "Zapier",
+  "Cherry Studio", "Ollama", "LM Studio", "Jan", "Open WebUI", "AnythingLLM", "ComfyUI", "Stable Diffusion",
+]);
 
 export function computeLevel(userType: "app" | "agent", tools: string[]): number {
   const unique = new Set(tools);

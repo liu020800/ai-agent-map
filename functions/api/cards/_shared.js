@@ -133,8 +133,9 @@ export async function updateRow(env, cardId, payload) {
 
 export function buildIdentityCardPrompt(input, cardId) {
   const region = input.city ? `${input.province}${input.city}` : input.province;
-  const tools = input.tools.join(" / ");
-  return `生成一张竖版 4:5 的中文 AI Agent 身份卡图片，包含标题：AI Agent Map、AI Agent 身份卡、昵称：${input.nickname}、ID：${cardId}、地区：${region}、工具：${tools}、签名：${input.signature}、liusq.icu。视觉元素：轻赛博、现代信息卡、蓝紫渐变、抽象地图轮廓、发光城市点、科技边框。不要人物头像，不要真人，不要二维码。`;
+  const tools = input.tools.slice(0, 4).join(" / ");
+  const signature = input.signature || "探索 AI，连接未来";
+  return `生成一张竖版4:5的高质量AI Agent身份卡，尺寸适配1824x2272。整体底色必须是深黑、深蓝黑或暗紫渐变，配合霓虹青蓝紫光效、扫描线、玻璃拟态科技面板，符合深色赛博网站主题，禁止纯白背景、浅灰背景、淡色证件照背景。画面核心必须是年轻、干练、有吸引力的未来科技角色头像或半身像，二次元插画风、赛博霓虹、科技护目镜、发光外套、HUD数据界面、芯片纹路，整体像高质量游戏角色身份卡。下方或侧边加入深色科技UI信息面板，信息简洁清晰但不要压过角色主视觉。必须包含文字：AI Agent Map，AI身份卡，昵称：${input.nickname}，ID：${cardId}，地区：${region}，工具：${tools}，签名：${signature}，liusq.icu。不要做成普通白底证件卡，不要纯文本表格，不要淡背景边框卡，不要办公海报，不要真实照片风，不要低幼卡通。`;
 }
 
 export async function generateWithSenseNova(apiKey, prompt) {
