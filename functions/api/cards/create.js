@@ -7,9 +7,11 @@ import {
   getSupabaseEnv,
   hashText,
   insertRow,
+  isFallbackImageUrl,
   jsonResponse,
   normalizeInput,
   toCardRecord,
+  updateRow,
   validateCreateInput,
 } from "./_shared.js";
 
@@ -28,7 +30,25 @@ export async function onRequestPost(context) {
       `select=*&visitor_hash=eq.${encodeURIComponent(visitorHash)}&status=eq.valid&order=created_at.desc&limit=1`,
     );
     if (existing.ok && existing.rows.length > 0) {
-      return jsonResponse({ success: true, card: toCardRecord(existing.rows[0], origin), reused: true }, 200);
+      const existingRow = existing.rows[0];
+      if (!isFallbackImageUrl(existingRow.avatar_seed)) {
+        return jsonResponse({ success: true, card: toCardRecord(existingRow, origin), reused: true }, 200);
+      }
+
+      const apiKey = context.env.SENSENOVA_API_KEY;
+      if (!apiKey) return jsonResponse({ success: false, error: "SENSENOVA_API_KEY not configured" }, 500);
+
+      try {
+        const replacementUrl = await generateWithSenseNova(apiKey, buildIdentityCardPrompt(input, existingRow.card_slug));
+        const updated = await updateRow(env, existingRow.card_slug, {
+          avatar_seed: replacementUrl,
+          updated_at: new Date().toISOString(),
+        });
+        if (!updated.ok) return jsonResponse({ success: false, error: updated.error }, 500);
+        return jsonResponse({ success: true, card: toCardRecord(updated.row, origin), reused: false, regeneratedFallback: true }, 200);
+      } catch {
+        return jsonResponse({ success: false, error: "AI 身份卡图片生成失败，请稍后重试" }, 502);
+      }
     }
 
     const apiKey = context.env.SENSENOVA_API_KEY;
@@ -36,12 +56,11 @@ export async function onRequestPost(context) {
 
     const cardId = generateCardId();
     const prompt = buildIdentityCardPrompt(input, cardId);
-    let imageUrl = `${origin}/api/cards/${encodeURIComponent(cardId)}/image.svg`;
+    let imageUrl = "";
     try {
       imageUrl = await generateWithSenseNova(apiKey, prompt);
     } catch {
-      // Do not fail card creation when the image model is temporarily unavailable.
-      // The saved SVG endpoint remains public, downloadable, and shareable.
+      return jsonResponse({ success: false, error: "AI 身份卡图片生成失败，请稍后重试" }, 502);
     }
     const payload = {
       nickname: input.nickname,

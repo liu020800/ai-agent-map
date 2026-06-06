@@ -99,6 +99,10 @@ export function toCardRecord(row, origin = "https://liusq.icu") {
   };
 }
 
+export function isFallbackImageUrl(imageUrl) {
+  return typeof imageUrl === "string" && imageUrl.includes("/api/cards/") && imageUrl.endsWith("/image.svg");
+}
+
 export async function fetchRows(env, query) {
   const res = await fetch(`${env.supabaseUrl}/rest/v1/users?${query}`, { headers: env.headers });
   if (!res.ok) return { ok: false, error: await res.text(), rows: [] };

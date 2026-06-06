@@ -557,6 +557,7 @@ export function getOrCreateVisitorId(): string {
 
 export function cacheAgentCard(card: AgentCardRecord) {
   if (typeof window === "undefined") return;
+  if (isFallbackCardImage(card.imageUrl)) return;
   window.localStorage.setItem(STORAGE_KEYS.cardId, card.cardId);
   window.localStorage.setItem(STORAGE_KEYS.cardCache, JSON.stringify(card));
   window.localStorage.setItem("ai-agent-passport-current", JSON.stringify({
@@ -577,10 +578,22 @@ export function readCachedAgentCard(): AgentCardRecord | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEYS.cardCache);
-    return raw ? (JSON.parse(raw) as AgentCardRecord) : null;
+    if (!raw) return null;
+    const card = JSON.parse(raw) as AgentCardRecord;
+    if (isFallbackCardImage(card.imageUrl)) {
+      window.localStorage.removeItem(STORAGE_KEYS.cardId);
+      window.localStorage.removeItem(STORAGE_KEYS.cardCache);
+      window.localStorage.removeItem("ai-agent-passport-current");
+      return null;
+    }
+    return card;
   } catch {
     return null;
   }
+}
+
+function isFallbackCardImage(imageUrl: string | undefined): boolean {
+  return typeof imageUrl === "string" && imageUrl.includes("/api/cards/") && imageUrl.endsWith("/image.svg");
 }
 
 async function parseAgentCardResponse(res: Response): Promise<AgentCardResponse> {
