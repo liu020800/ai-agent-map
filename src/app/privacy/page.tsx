@@ -33,7 +33,7 @@ export default function PrivacyPage() {
             <p className="mt-3">本站可能调用 SenseNova U1 Fast 等第三方模型服务生成身份卡图片。为了完成图片生成，我们会将用户填写的昵称、地区、工具和签名等必要信息发送给相关服务。</p>
 
             <h2 className="mt-8 text-xl font-bold text-white">数据删除</h2>
-            <p className="mt-3">如需删除身份卡或相关数据，请通过页面提供的联系方式联系站长，并提供身份卡 ID。</p>
+            <p className="mt-3">如需删除身份卡或相关数据，请通过页面提供的联系方式联系站长，并提供身份卡 ID。邮箱：liusq9428@163.com，QQ：515107596。</p>
 
             <h2 className="mt-8 text-xl font-bold text-white">未成年人</h2>
             <p className="mt-3">如果你是未成年人，请在监护人同意后使用本站。</p>

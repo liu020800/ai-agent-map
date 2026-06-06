@@ -124,18 +124,11 @@ export default function HomePage() {
                   <p className="mb-4 section-eyebrow text-white/55">省份信号榜</p>
                   <RankingList
                     empty="这里还没有 Agent 信号,成为第一个点亮它的人。"
-                    items={(provinces.length ? provinces.slice(0, 5) : [
-                      { name: "北京", value: 256 },
-                      { name: "上海", value: 230 },
-                      { name: "广东", value: 198 },
-                      { name: "浙江", value: 152 },
-                      { name: "江苏", value: 128 },
-                    ]).map((province, index) => ({
+                    items={provinces.slice(0, 5).map((province, index) => ({
                       name: province.name,
                       count: province.value,
                       accent: ["#a3e635", "#67e8f9", "#f0abfc", "#60a5fa", "#fb7185"][index] ?? "#67e8f9",
-                      trend: index === 0 ? "up" : "flat",
-                      delta: index === 0 ? "Hot" : undefined,
+                      trend: "flat",
                     }))}
                   />
                 </div>

@@ -30,7 +30,7 @@ export default function TermsPage() {
             <p className="mt-3">本站是个人兴趣项目，不保证服务持续无中断，不对因使用本站产生的间接损失负责。</p>
 
             <h2 className="mt-8 text-xl font-bold text-white">联系方式</h2>
-            <p className="mt-3">如需反馈问题、删除数据或联系站长，请通过页脚邮箱发送身份卡 ID 和问题说明。</p>
+            <p className="mt-3">如需反馈问题、删除数据或联系站长，请通过页脚邮箱发送身份卡 ID 和问题说明。邮箱：liusq9428@163.com，QQ：515107596。</p>
           </article>
         </PageShell>
       </Section>

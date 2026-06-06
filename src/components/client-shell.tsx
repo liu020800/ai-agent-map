@@ -24,7 +24,7 @@ export default function ClientShell({ children }: { children: React.ReactNode })
             <span>·</span>
             <Link href="/terms" className="hover:text-cyan-200">用户协议</Link>
             <span>·</span>
-            <a href="mailto:Liusq9428@gmail.com" className="hover:text-cyan-200">联系反馈</a>
+            <a href="mailto:liusq9428@163.com" className="hover:text-cyan-200">联系反馈：liusq9428@163.com / QQ 515107596</a>
           </div>
         </div>
       </footer>

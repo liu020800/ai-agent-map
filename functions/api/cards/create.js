@@ -36,7 +36,13 @@ export async function onRequestPost(context) {
 
     const cardId = generateCardId();
     const prompt = buildIdentityCardPrompt(input, cardId);
-    const imageUrl = await generateWithSenseNova(apiKey, prompt);
+    let imageUrl = `${origin}/api/cards/${encodeURIComponent(cardId)}/image.svg`;
+    try {
+      imageUrl = await generateWithSenseNova(apiKey, prompt);
+    } catch {
+      // Do not fail card creation when the image model is temporarily unavailable.
+      // The saved SVG endpoint remains public, downloadable, and shareable.
+    }
     const payload = {
       nickname: input.nickname,
       province: input.province,
