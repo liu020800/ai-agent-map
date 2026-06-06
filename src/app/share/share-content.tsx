@@ -116,8 +116,14 @@ export default function ShareContent() {
     const task = cardId ? getCardById(cardId) : getCardByVisitorId(visitorId);
     task.then((found) => {
       if (!active) return;
-      if (found) setCard(found);
-      else setMessage("没有找到身份卡数据");
+      if (found) {
+        setCard(found);
+      } else {
+        setCard(null);
+        window.localStorage.removeItem(STORAGE_KEYS.cardId);
+        window.localStorage.removeItem(STORAGE_KEYS.cardCache);
+        setMessage("没有找到身份卡数据");
+      }
       setLoading(false);
     }).catch((error) => {
       if (!active) return;

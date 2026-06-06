@@ -95,7 +95,13 @@ export default function SurveyPage() {
     const task = cardId ? getCardById(cardId) : getCardByVisitorId(visitorId);
     task.then((card) => {
       if (!active) return;
-      if (card) setExistingCard(card);
+      if (card) {
+        setExistingCard(card);
+      } else {
+        setExistingCard(null);
+        window.localStorage.removeItem(STORAGE_KEYS.cardId);
+        window.localStorage.removeItem(STORAGE_KEYS.cardCache);
+      }
       setCheckingExisting(false);
     }).catch(() => {
       if (active) setCheckingExisting(false);
