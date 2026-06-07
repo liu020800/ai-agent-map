@@ -177,7 +177,7 @@ export default function ChinaSvgMap({ data = [] }: { data?: MapDatum[] }) {
   if (!renderData) {
     return (
       <div className="flex h-full min-h-[320px] items-center justify-center rounded-xl border border-neutral-200 bg-neutral-50 text-sm text-neutral-500">
-        中国地图加载中...
+        全国使用预览准备中
       </div>
     );
   }

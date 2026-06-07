@@ -31,7 +31,7 @@ export default function SpotlightCard({
       ref={ref}
       onMouseMove={handleMove}
       onMouseLeave={handleLeave}
-      className={`relative overflow-hidden rounded-[18px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01))] transition-transform duration-500 ${className}`}
+      className={`app-card relative overflow-hidden rounded-[18px] transition-transform duration-500 ${className}`}
     >
       {pos ? (
         <div

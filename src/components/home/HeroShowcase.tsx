@@ -5,6 +5,8 @@ import { motion } from "framer-motion";
 import { ArrowRight, Map, Shield, Crosshair, Trophy, Workflow } from "lucide-react";
 import CountUp from "@/components/react-bits/CountUp";
 import AgentPassportPreview from "./AgentPassportPreview";
+import { demoOverview, demoProvinces, demoTools } from "@/data/demo";
+import { hasOverviewData } from "@/lib/display";
 
 type HeroOverview = {
   total: number;
@@ -20,7 +22,10 @@ type HeroShowcaseProps = {
 };
 
 export default function HeroShowcase({ overview, topProvinces = [], topTool = null }: HeroShowcaseProps) {
-  const safeOverview: HeroOverview = overview ?? { total: 0, agentUsers: 0, appUsers: 0, todayNew: 0 };
+  const hasRealData = hasOverviewData(overview);
+  const safeOverview: HeroOverview = hasRealData ? overview! : demoOverview;
+  const safeTopProvinces = topProvinces.length ? topProvinces : demoProvinces.slice(0, 3).map((province) => province.name);
+  const safeTopTool = topTool ?? demoTools[0];
   const stats = [
     { key: "total", label: "已生成身份卡", value: safeOverview.total },
     { key: "agentUsers", label: "Agent 用户", value: safeOverview.agentUsers },
@@ -94,8 +99,8 @@ export default function HeroShowcase({ overview, topProvinces = [], topTool = nu
                   </div>
                 </div>
                 <div className="order-1 flex flex-col gap-3 lg:order-2">
-                  <SideMetric icon={Trophy} label="热门地区" value={topProvinces[0] || "待点亮"} sub={topProvinces[1] ? `次热:${topProvinces[1]}` : "等待真实用户点亮"} />
-                  <SideMetric icon={Workflow} label="常用工具" value={topTool?.name || "待选择"} sub={topTool ? `${topTool.count} 人使用` : "等待真实提交"} />
+                  <SideMetric icon={Trophy} label="热门地区" value={safeTopProvinces[0] || "广东"} sub={`${hasRealData ? "真实" : "演示"}排行 · 次热 ${safeTopProvinces[1] || "上海"}`} />
+                  <SideMetric icon={Workflow} label="常用工具" value={safeTopTool.name} sub={`${safeTopTool.count} 人使用 · ${hasRealData ? "真实数据" : "演示数据"}`} />
                   <SideMetric icon={Crosshair} label="今日新增" value={`+${safeOverview.todayNew}`} sub="近 24h 新增身份" />
                 </div>
               </div>

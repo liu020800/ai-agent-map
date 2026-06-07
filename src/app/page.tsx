@@ -10,6 +10,8 @@ import { PageShell, Section, RankingList } from "@/components/ui";
 import SpotlightCard from "@/components/react-bits/SpotlightCard";
 import TiltedCard from "@/components/react-bits/TiltedCard";
 import { fetchRanking, type RankingData } from "@/lib/api-client";
+import { demoRankingData } from "@/data/demo";
+import { hasOverviewData } from "@/lib/display";
 
 import ChinaSvgMap from "@/components/ChinaSvgMap";
 
@@ -30,9 +32,11 @@ export default function HomePage() {
     };
   }, []);
 
-  const overview = ranking?.overview ?? null;
-  const tools = ranking?.tools ?? [];
-  const provinces = ranking?.provinces ?? [];
+  const hasRealData = hasOverviewData(ranking?.overview);
+  const displayRanking = hasRealData && ranking ? ranking : demoRankingData;
+  const overview = displayRanking.overview;
+  const tools = displayRanking.tools;
+  const provinces = displayRanking.provinces;
   const topTool = tools[0] ?? null;
   const topProvinces = provinces.slice(0, 3).map((province) => province.name);
 

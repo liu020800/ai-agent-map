@@ -12,19 +12,22 @@ import {
   CheckCircle2,
   ChevronRight,
   CircuitBoard,
+  Code2,
   Compass,
   Copy,
-  Cpu,
   Download,
   FileText,
+  HardDrive,
   MapPin,
+  MessageCircle,
   RefreshCw,
   ScanLine,
   Shield,
   Sword,
+  Terminal,
+  Workflow,
   Zap,
 } from "lucide-react";
-import SplitText from "@/components/react-bits/SplitText";
 import { PageShell, Section } from "@/components/ui";
 import { generateAvatarSvg } from "@/lib/avatar";
 import {
@@ -37,7 +40,6 @@ import {
   generateIdentityCard,
   generateIdentityId,
 } from "@/lib/survey-service";
-import { toolColor } from "@/data/mock";
 import {
   createCardAndGenerateImage,
   getCardById,
@@ -49,6 +51,7 @@ import {
   type AgentCardRecord,
 } from "@/lib/api-client";
 import type { SurveyFormPayload } from "@/lib/types";
+import { displayLevel } from "@/lib/display";
 
 type Step = 1 | 2 | 3 | 4;
 type SubmitStatus = "idle" | "loading" | "success" | "error";
@@ -79,12 +82,15 @@ const COMMON_TOOL_NAMES = new Set([
   "NAS",
 ]);
 
+const AGENT_PRIORITY_TOOLS = ["Codex", "Claude Code", "OpenCode", "Cursor", "Dify", "n8n"];
+const APP_PRIORITY_TOOLS = ["ChatGPT", "OpenAI", "DeepSeek", "豆包", "Kimi", "通义千问"];
+
 export default function SurveyPage() {
   const [step, setStep] = useState<Step>(1);
   const [userType, setUserType] = useState<"agent" | "app">("agent");
   const [tools, setTools] = useState<string[]>([]);
   const [scenarios, setScenarios] = useState<string[]>([]);
-  const [province, setProvince] = useState<string>(SURVEY_PROVINCES[1]);
+  const [province, setProvince] = useState<string>("");
   const [city, setCity] = useState<string>("");
   const [nickname, setNickname] = useState<string>("");
   const [signature, setSignature] = useState<string>("");
@@ -145,9 +151,23 @@ export default function SurveyPage() {
 
   const toolCount = tools.length;
   const scenarioCount = scenarios.length;
-  const provinceText = city ? `${province} · ${city}` : province;
-  const commonTools = useMemo(() => SURVEY_TOOLS.filter((tool) => COMMON_TOOL_NAMES.has(tool.name)), []);
-  const moreTools = useMemo(() => SURVEY_TOOLS.filter((tool) => !COMMON_TOOL_NAMES.has(tool.name)), []);
+  const provinceText = province && city ? `${province} · ${city}` : province || "待填写";
+  const sortedSurveyTools = useMemo(() => {
+    const priority = userType === "agent" ? AGENT_PRIORITY_TOOLS : APP_PRIORITY_TOOLS;
+    return [...SURVEY_TOOLS].sort((a, b) => {
+      const aRank = priority.indexOf(a.name);
+      const bRank = priority.indexOf(b.name);
+      if (aRank !== -1 || bRank !== -1) {
+        return (aRank === -1 ? 999 : aRank) - (bRank === -1 ? 999 : bRank);
+      }
+      const aCommon = COMMON_TOOL_NAMES.has(a.name) ? 0 : 1;
+      const bCommon = COMMON_TOOL_NAMES.has(b.name) ? 0 : 1;
+      if (aCommon !== bCommon) return aCommon - bCommon;
+      return a.name.localeCompare(b.name, "zh-CN");
+    });
+  }, [userType]);
+  const commonTools = useMemo(() => sortedSurveyTools.filter((tool) => COMMON_TOOL_NAMES.has(tool.name)), [sortedSurveyTools]);
+  const moreTools = useMemo(() => sortedSurveyTools.filter((tool) => !COMMON_TOOL_NAMES.has(tool.name)), [sortedSurveyTools]);
 
   const buildPayload = useCallback(
     (): SurveyFormPayload => ({
@@ -308,17 +328,17 @@ export default function SurveyPage() {
       <main className="relative min-h-screen overflow-hidden pb-16 pt-0">
         <Section className="relative z-10" spacing="sm">
           <PageShell>
-            <div className="mx-auto max-w-3xl rounded-[28px] border border-cyan-300/20 bg-black/40 p-6 text-center shadow-[0_0_54px_rgba(34,211,238,0.12)] backdrop-blur-xl sm:p-8">
-              <p className="title-font text-[11px] uppercase tracking-[0.32em] text-cyan-300">MY AGENT CARD</p>
-              <h1 className="title-font mt-4 text-3xl font-black text-white sm:text-5xl">你已经拥有 AI Agent 身份卡</h1>
-              <p className="mt-4 text-sm leading-7 text-white/65">
+            <div className="app-card-strong mx-auto max-w-3xl rounded-[28px] p-6 text-center sm:p-8">
+              <p className="app-soft title-font text-[11px] uppercase tracking-[0.32em]">MY AGENT CARD</p>
+              <h1 className="app-heading title-font mt-4 text-3xl font-black sm:text-5xl">你已经拥有 AI Agent 身份卡</h1>
+              <p className="app-muted mt-4 text-sm leading-7">
                 为避免重复消耗生图额度，系统已识别到你的浏览器身份。刷新或再次进入不会重新生成图片。
               </p>
-              <div className="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-black/50">
+              <div className="app-card-muted mt-6 overflow-hidden rounded-2xl">
                 {existingCard.imageUrl ? (
                   <img src={existingCard.imageUrl} alt={`${existingCard.nickname} 的 AI Agent 身份卡`} className="mx-auto max-h-[520px] w-full object-contain" />
                 ) : (
-                  <div className="p-10 text-white/60">身份卡图片暂不可用</div>
+                  <div className="app-muted p-10">身份卡图片暂不可用</div>
                 )}
               </div>
               <div className="mt-6 grid gap-3 sm:grid-cols-3">
@@ -344,24 +364,24 @@ export default function SurveyPage() {
                   重新生成身份卡
                 </button>
               </div>
-              <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                <p className="mb-3 text-sm font-semibold text-white">查询其他身份卡</p>
+              <div className="app-card mt-6 rounded-2xl p-4">
+                <p className="app-heading mb-3 text-sm font-semibold">查询其他身份卡</p>
                 <div className="flex flex-col gap-2 sm:flex-row">
-                  <input value={recoverNickname} onChange={(e) => setRecoverNickname(e.target.value)} placeholder="输入昵称找回身份卡" className="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none focus:border-cyan-300/40" />
+                  <input value={recoverNickname} onChange={(e) => setRecoverNickname(e.target.value)} placeholder="输入昵称找回身份卡" className="app-input min-w-0 flex-1 rounded-xl px-4 py-3 text-sm outline-none" />
                   <button type="button" onClick={handleRecoverSearch} className="btn-rb-ghost justify-center">查询</button>
                 </div>
                 {recoverResults.length > 0 && (
                   <div className="mt-3 grid gap-2 text-left">
                     {recoverResults.map((card) => (
-                      <Link key={card.cardId} href={`/share?cardId=${encodeURIComponent(card.cardId)}`} className="rounded-xl border border-white/10 bg-black/30 p-3 text-sm text-white/75 hover:border-cyan-300/30">
+                      <Link key={card.cardId} href={`/share?cardId=${encodeURIComponent(card.cardId)}`} className="app-card-muted rounded-xl p-3 text-sm hover:border-[var(--app-border-strong)]">
                         {card.nickname} · {card.province}{card.city} · {card.cardId}
                       </Link>
                     ))}
                   </div>
                 )}
               </div>
-              {submitMessage && <p className="mt-4 text-sm text-cyan-100/75">{submitMessage}</p>}
-              <p className="mt-5 text-xs text-white/35">AI 生成内容 · 仅供娱乐分享，不代表真实身份认证。</p>
+              {submitMessage && <p className="app-muted mt-4 text-sm">{submitMessage}</p>}
+              <p className="app-soft mt-5 text-xs">AI 生成内容 · 仅供娱乐分享，不代表真实身份认证。</p>
             </div>
           </PageShell>
         </Section>
@@ -446,7 +466,7 @@ export default function SurveyPage() {
             <div>
               <AnimatePresence mode="wait">
                 {step === 1 && (
-                  <motion.div key="step-1" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.3 }}>
+                  <motion.div key="step-1" initial={false} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.3 }}>
                     <StepShell icon={Sword} step={1} title="选择常用工具" subtitle="多选你日常使用的 AI 工具，先选常用的就好。">
                       <div className="space-y-5">
                         <ToolGroup title="常用工具" hint="推荐先从这里选择">
@@ -485,7 +505,7 @@ export default function SurveyPage() {
                 )}
 
                 {step === 2 && (
-                  <motion.div key="step-2" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.3 }}>
+                  <motion.div key="step-2" initial={false} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.3 }}>
                     <StepShell icon={FileText} step={2} title="使用场景" subtitle="多选你的主要用途。系统会据此生成你的角色称号。">
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         {SURVEY_SCENARIOS.map((s) => {
@@ -500,12 +520,13 @@ export default function SurveyPage() {
                 )}
 
                 {step === 3 && (
-                  <motion.div key="step-3" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.3 }}>
+                  <motion.div key="step-3" initial={false} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.3 }}>
                     <StepShell icon={MapPin} step={3} title="地区信息" subtitle="填写城市、昵称和一句话签名，城市会进入全国玩家地图统计。">
                       <div className="grid gap-4">
                         <div className="grid gap-3 sm:grid-cols-2">
                           <Field label="省份 / 据点" required>
                             <select value={province} onChange={(e) => setProvince(e.target.value)} className="w-full">
+                              <option value="">待填写</option>
                               {SURVEY_PROVINCES.map((p) => (
                                 <option key={p} value={p}>{p}</option>
                               ))}
@@ -529,7 +550,7 @@ export default function SurveyPage() {
                 )}
 
                 {step === 4 && (
-                  <motion.div key="step-4" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.3 }}>
+                  <motion.div key="step-4" initial={false} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} transition={{ duration: 0.3 }}>
                     <StepShell icon={Shield} step={4} title="生成 AI 身份卡" subtitle="预览你的身份卡。提交后会把工具、角色和地区写进全国统计。">
                       <div className="grid gap-3">
                         <div className="grid gap-3 sm:grid-cols-2">
@@ -632,7 +653,7 @@ export default function SurveyPage() {
 
 
 function StepProgress({ step }: { step: number }) {
-  const progress = ((step - 1) / (STEPS.length - 1)) * 100;
+  const progress = Math.round((step / STEPS.length) * 100);
   return (
     <div className="rounded-3xl border border-white/[0.08] bg-black/40 p-5 backdrop-blur-xl">
       <div className="mb-3 flex items-center justify-between text-[10px] uppercase tracking-[0.28em] text-white/40">
@@ -641,7 +662,7 @@ function StepProgress({ step }: { step: number }) {
       </div>
       <div className="mb-5 h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
         <motion.div
-          initial={{ width: 0 }}
+          initial={false}
           animate={{ width: `${progress}%` }}
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
           className="h-full rounded-full bg-gradient-to-r from-cyan-300 via-violet-300 to-pink-300"
@@ -740,6 +761,7 @@ function ToolCard({
   selected: boolean;
   onClick: () => void;
 }) {
+  const Icon = toolIconFor(category, name);
   return (
     <motion.button
       type="button"
@@ -762,7 +784,7 @@ function ToolCard({
         <span
           className="flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 bg-neutral-50"
         >
-          <Cpu className="h-3.5 w-3.5 text-neutral-700" />
+          <Icon className="h-3.5 w-3.5 text-neutral-700" />
         </span>
       <div className="min-w-0">
         <p className="truncate text-sm font-medium text-neutral-950">{name}</p>
@@ -779,6 +801,14 @@ function ToolCard({
         )}
     </motion.button>
   );
+}
+
+function toolIconFor(category: string, name: string) {
+  if (category === "agent" || ["Codex", "Claude Code", "OpenCode", "Cursor"].includes(name)) return Terminal;
+  if (category === "automation" || ["Dify", "n8n"].includes(name)) return Workflow;
+  if (category === "local" || ["Ollama", "LM Studio", "Docker", "NAS"].includes(name)) return HardDrive;
+  if (["ChatGPT", "OpenAI", "Claude", "DeepSeek", "豆包", "Kimi", "通义千问"].includes(name)) return MessageCircle;
+  return Code2;
 }
 
 function ScenarioCard({
@@ -881,9 +911,8 @@ function LivePreview({
   signal: number;
 }) {
   const scenarioNames = SURVEY_SCENARIOS.filter((s) => scenarios.includes(s.id)).map((s) => s.name);
-  const provinceText = city ? `${province} · ${city}` : province;
-  const primaryTool = tools[0] ?? "未选择";
-  const mainScenario = scenarioNames[0] ?? "等待选择";
+  const provinceText = province && city ? `${province} · ${city}` : province || "待填写";
+  const previewSignature = signature.trim() || (tools.length && scenarioNames.length && province !== "" ? `我是 ${role.title}，常用 ${tools.length} 个 AI 工具，来自 ${provinceText}。` : "完成选择后自动生成");
 
   return (
     <div className="space-y-3">
@@ -921,7 +950,7 @@ function LivePreview({
                 <p className="mt-1 text-sm text-neutral-600">{role.title}</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <span className="rounded-md border border-neutral-300 bg-white px-2.5 py-1 text-xs text-neutral-700">
-                Lv. {String(level).padStart(2, "0")} · {rarityName}
+                    {displayLevel(level)} · {rarityName}
                   </span>
                   <span className="rounded-md border border-neutral-300 bg-white px-2.5 py-1 text-xs text-neutral-700">
                     活跃度 {signal.toLocaleString()}
@@ -932,8 +961,8 @@ function LivePreview({
           </div>
 
           <div className="mt-6 grid grid-cols-3 gap-2 text-center">
-            <PreviewStat label="工具" value={`${tools.length}`} tone={rarityAccent} />
-            <PreviewStat label="场景" value={`${scenarioNames.length}`} tone={rarityAccent} />
+            <PreviewStat label="工具" value={tools.length ? `${tools.length}` : "待选择"} tone={rarityAccent} />
+            <PreviewStat label="场景" value={scenarioNames.length ? `${scenarioNames.length}` : "待选择"} tone={rarityAccent} />
             <PreviewStat label="活跃度" value={signal.toLocaleString()} tone={rarityAccent} />
           </div>
 
@@ -959,7 +988,7 @@ function LivePreview({
                     )}
                   </>
                 ) : (
-                  <span className="text-xs text-neutral-400">未选择</span>
+                  <span className="text-xs text-neutral-400">待选择</span>
                 )}
               </div>
             </div>
@@ -980,7 +1009,7 @@ function LivePreview({
                     )}
                   </>
                 ) : (
-                  <span className="text-xs text-neutral-400">未选择</span>
+                  <span className="text-xs text-neutral-400">待选择</span>
                 )}
               </div>
             </div>
@@ -989,17 +1018,11 @@ function LivePreview({
           <div className="mt-auto rounded-xl border border-neutral-200 bg-neutral-50 p-3">
             <p className="text-xs text-neutral-500">分享签名</p>
             <p className="mt-1 line-clamp-2 text-xs leading-5 text-neutral-700">
-              {signature.trim() || `我是 ${role.title}，常用 ${tools.length || 0} 个 AI 工具，来自 ${provinceText}。`}
+              {previewSignature}
             </p>
             <div className="mt-3 flex items-end justify-between gap-3">
-              <div className="grid h-11 w-11 grid-cols-4 gap-0.5 rounded border border-neutral-300 bg-white p-1">
-                {Array.from({ length: 16 }).map((_, index) => (
-                  <span
-                    key={index}
-                    className="rounded-[1px] bg-neutral-950"
-                    style={{ opacity: (index + signal) % 3 === 0 ? 0.18 : 0.9 }}
-                  />
-                ))}
+              <div className="flex h-11 w-11 items-center justify-center rounded-lg border border-neutral-300 bg-white text-neutral-950">
+                <Zap className="h-5 w-5" />
               </div>
               <span className="text-[11px] text-neutral-400">AI Agent Map</span>
             </div>

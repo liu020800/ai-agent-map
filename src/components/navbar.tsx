@@ -51,10 +51,10 @@ export default function Navbar() {
 
   return (
     <motion.header
-      initial={{ y: -8, opacity: 0 }}
+      initial={false}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
-      className="fixed left-0 right-0 top-0 z-50 border-b border-[#eeeeee] bg-white/90 backdrop-blur-md"
+      className="app-card-strong fixed left-0 right-0 top-0 z-50 border-b backdrop-blur-md"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <nav
@@ -62,12 +62,12 @@ export default function Navbar() {
           className="flex h-16 items-center justify-between"
         >
           <Link href="/" className="group flex items-center gap-3" aria-label="AI Agent Map 首页">
-            <div className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg border border-neutral-200 bg-white text-neutral-900 transition group-hover:bg-neutral-50">
+            <div className="app-card-muted relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg transition">
               <Zap className="relative z-10 h-5 w-5" />
             </div>
             <div>
-              <p className="text-sm font-medium tracking-[-0.01em] text-neutral-950">AI Agent Map</p>
-              <p className="text-xs text-neutral-500">AI 工具栈</p>
+              <p className="app-heading text-sm font-medium tracking-[-0.01em]">AI Agent Map</p>
+              <p className="app-soft text-xs">AI 工具栈</p>
             </div>
           </Link>
 
@@ -81,13 +81,13 @@ export default function Navbar() {
                   aria-current={active ? "page" : undefined}
                   className={
                     "relative flex items-center gap-2 px-3 text-sm font-medium transition-colors " +
-                    (active ? "text-neutral-950" : "text-neutral-500 hover:text-neutral-950")
+                    (active ? "app-heading" : "app-muted hover:app-heading")
                   }
                 >
                   {active ? (
                     <motion.div
                       layoutId="nav-active"
-                      className="absolute inset-x-3 bottom-0 h-0.5 bg-neutral-950"
+                      className="absolute inset-x-3 bottom-0 h-0.5 bg-[var(--app-heading)]"
                       transition={{ duration: 0.16 }}
                     />
                   ) : null}
@@ -102,13 +102,13 @@ export default function Navbar() {
             <button
               type="button"
               onClick={toggleTheme}
-              className="theme-toggle flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-600 transition hover:bg-neutral-50 hover:text-neutral-950"
+              className="theme-toggle app-button-secondary flex h-9 w-9 items-center justify-center rounded-lg border transition"
               aria-label={theme === "dark" ? "切换到浅色模式" : "切换到深色模式"}
               title={theme === "dark" ? "浅色模式" : "深色模式"}
             >
               {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
-            <Link href="/survey" className="btn-lusion !rounded-lg !border-neutral-950 !bg-neutral-950 !px-4 !py-2 !text-sm !font-medium !text-white sm:!px-5">
+            <Link href="/survey" className="app-button-primary inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium sm:px-5">
               <Shield className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">生成身份卡</span>
               <span className="sm:hidden">生成</span>
@@ -116,7 +116,7 @@ export default function Navbar() {
             <button
               type="button"
               onClick={() => setOpen((prev) => !prev)}
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-600 transition hover:bg-neutral-50 hover:text-neutral-950 md:hidden"
+              className="app-button-secondary flex h-9 w-9 items-center justify-center rounded-lg border transition md:hidden"
               aria-label={open ? "关闭菜单" : "打开菜单"}
               aria-expanded={open}
               aria-controls="mobile-menu"
@@ -136,7 +136,7 @@ export default function Navbar() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.22, ease: "easeOut" }}
-            className="mx-4 mt-2 overflow-hidden rounded-xl border border-neutral-200 bg-white p-2 md:hidden"
+            className="app-card-strong mx-4 mt-2 overflow-hidden rounded-xl p-2 md:hidden"
           >
             <ul className="flex flex-col gap-1">
               {NAV.map((item) => {
@@ -149,8 +149,8 @@ export default function Navbar() {
                       className={
                         "flex items-center gap-3 rounded-lg border px-4 py-3 text-sm font-medium transition " +
                         (active
-                          ? "border-neutral-300 bg-neutral-100 text-neutral-950"
-                          : "border-transparent bg-white text-neutral-600 hover:bg-neutral-50 hover:text-neutral-950")
+                          ? "app-card-muted app-heading"
+                          : "border-transparent app-muted hover:app-card-muted")
                       }
                     >
                       <item.icon className="h-4 w-4" />

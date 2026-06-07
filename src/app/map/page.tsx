@@ -12,6 +12,8 @@ import { PageShell, Section } from "@/components/ui";
 import { DataNotice } from "@/components/workbench";
 import ChinaSvgMap from "@/components/ChinaSvgMap";
 import { toolColor } from "@/data/mock";
+import { demoRankingData } from "@/data/demo";
+import { dataModeLabel, hasOverviewData } from "@/lib/display";
 import { SURVEY_PROVINCES } from "@/lib/survey-service";
 import { fetchRanking, type RankingData } from "@/lib/api-client";
 
@@ -57,7 +59,7 @@ function StableGlassCard({
   tone?: "cyan" | "emerald" | "amber" | "violet";
 }) {
   return (
-    <div className={`relative overflow-hidden rounded-xl border border-neutral-200 bg-white p-5 ${className}`}>
+    <div className={`app-card relative overflow-hidden rounded-xl p-5 ${className}`}>
       <div className="relative z-10">{children}</div>
     </div>
   );
@@ -162,17 +164,17 @@ function StatCard({
   suffix?: string;
 }) {
   return (
-    <div className="group relative overflow-hidden rounded-xl border border-neutral-200 bg-white p-4 transition-colors duration-150 hover:bg-neutral-50">
+    <div className="app-card group relative overflow-hidden rounded-xl p-4 transition-colors duration-150">
       <div aria-hidden className="absolute -right-8 -top-8 h-24 w-24 rounded-full opacity-30 blur-2xl transition-opacity duration-500 group-hover:opacity-60" style={{ background: tone }} />
       <div className="relative flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] bg-black/30">
+        <div className="app-card-muted flex h-9 w-9 items-center justify-center rounded-xl">
           <Icon className="h-4 w-4" style={{ color: tone }} />
         </div>
-        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">{label}</p>
+        <p className="app-soft text-[10px] font-semibold uppercase tracking-[0.22em]">{label}</p>
       </div>
-      <div className="relative mt-3 title-font text-3xl font-black text-white">
+      <div className="app-heading relative mt-3 title-font text-3xl font-black">
         {typeof value === "number" ? <CountUp to={value} duration={1.4} /> : value}
-        {suffix && <span className="ml-1 text-base font-bold text-white/55">{suffix}</span>}
+        {suffix && <span className="app-soft ml-1 text-base font-bold">{suffix}</span>}
       </div>
     </div>
   );
@@ -280,7 +282,7 @@ function buildProvinceSignals(ranking: RankingData | null): ProvinceSignal[] {
     value: provinceStats.get(province) ?? 0,
     cityCount: cityStats.filter((city) => city.province === province && city.count > 0).length,
     growthRate: 0,
-    topTool: topToolsByProvince.get(province) || "待点亮",
+    topTool: topToolsByProvince.get(province) || "Codex",
   })).sort((a, b) => b.value - a.value || a.name.localeCompare(b.name, "zh-Hans-CN"));
 }
 
@@ -298,9 +300,6 @@ function buildToolSignals(ranking: RankingData | null): ToolSignal[] {
 
 function buildCityLog(ranking: RankingData | null): CitySignal[] {
   const cities = ranking?.cities ?? [];
-  if (!cities.length) {
-    return [{ time: "--:--", city: "待点亮", province: "中国", role: "等待真实用户生成身份卡", tool: "AI Agent Map", tone: "#22d3ee" }];
-  }
   const now = new Date();
   return cities.slice(0, 8).map((city, index) => ({
     time: new Date(now.getTime() - index * 5 * 60 * 1000).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" }),
@@ -317,9 +316,6 @@ function buildCampDistribution(ranking: RankingData | null): CampSignal[] {
   const total = Math.max(roles.reduce((sum, role) => sum + role.count, 0), 1);
   const icons = [Code, FileText, Cpu, Network, BookOpen, Sparkles];
   const tones = ["#22d3ee", "#a855f7", "#10b981", "#f59e0b", "#06b6d4", "#fb7185"];
-  if (!roles.length) {
-    return [{ name: "等待真实用户", icon: Sparkles, count: 0, share: 0, tone: "#22d3ee" }];
-  }
   return roles.slice(0, 6).map((role, index) => ({
     name: role.role,
     icon: icons[index] ?? Sparkles,
@@ -343,16 +339,19 @@ export default function MapPage() {
     };
   }, []);
 
-  const overview = ranking?.overview ?? ZERO_OVERVIEW;
-  const provinces = useMemo(() => buildProvinceSignals(ranking), [ranking]);
+  const hasRealData = hasOverviewData(ranking?.overview);
+  const displayRanking = hasRealData ? ranking : demoRankingData;
+  const modeLabel = dataModeLabel(hasRealData);
+  const overview = displayRanking?.overview ?? demoRankingData.overview;
+  const provinces = useMemo(() => buildProvinceSignals(displayRanking), [displayRanking]);
   const activeProvinces = provinces.filter((p) => p.value > 0);
   const radarProvinces = activeProvinces.length ? activeProvinces : provinces.slice(0, 8);
-  const tools = useMemo(() => buildToolSignals(ranking), [ranking]);
-  const camps = useMemo(() => buildCampDistribution(ranking), [ranking]);
-  const cityLog = useMemo(() => buildCityLog(ranking), [ranking]);
-  const totalCities = ranking?.cities?.length ?? 0;
+  const tools = useMemo(() => buildToolSignals(displayRanking), [displayRanking]);
+  const camps = useMemo(() => buildCampDistribution(displayRanking), [displayRanking]);
+  const cityLog = useMemo(() => buildCityLog(displayRanking), [displayRanking]);
+  const totalCities = displayRanking?.cities?.length ?? 0;
   const hottestProvince = provinces[0];
-  const dominantTool = tools[0] ?? { name: "待点亮", count: 0, category: "Agent" as const, heat: 0, growthRate: 0 };
+  const dominantTool = tools[0] ?? { name: "Codex", count: 188, category: "Agent" as const, heat: 100, growthRate: 24 };
   const [tick, setTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setTick((t) => (t + 1) % cityLog.length), 4000);
@@ -399,7 +398,7 @@ export default function MapPage() {
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-3 text-[11px] text-gray-500">
                 <span className="flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-                  数据正在收集中
+                  {hasRealData ? "真实数据更新中" : "演示数据预览"}
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Activity className="h-3 w-3 text-cyan-300" />
@@ -411,7 +410,7 @@ export default function MapPage() {
                 </span>
               </div>
               <DataNotice>
-                当前为早期工作台数据，真实身份卡记录正在收集中；地图分布会随用户提交自动更新。
+                {hasRealData ? "当前显示真实身份卡记录，地图分布会随用户提交自动更新。" : "当前为演示数据 · 真实身份卡记录正在收集中。"}
               </DataNotice>
             </motion.div>
 
@@ -437,7 +436,7 @@ export default function MapPage() {
             <StatCard label="App 用户" value={overview.appUsers} icon={Zap} tone="#f59e0b" />
             <StatCard label="今日新增" value={overview.todayNew} icon={Sparkles} tone="#10b981" />
             <StatCard label="覆盖城市" value={totalCities} icon={MapPin} tone="#fb7185" />
-            <StatCard label="最热省份" value={hottestProvince.value > 0 ? hottestProvince.name : "待点亮"} icon={Flame} tone="#fbbf24" />
+            <StatCard label="最热省份" value={hottestProvince.name || "广东"} icon={Flame} tone="#fbbf24" />
           </section>
 
           {/* PROVINCE HEAT + CITY SIGNAL FLOW */}
@@ -468,14 +467,14 @@ export default function MapPage() {
                           <p className="mt-0.5 text-[10px] uppercase tracking-[0.2em] text-white/35">0{i + 1}</p>
                         </div>
                         <span className="title-font rounded-md border border-cyan-400/20 bg-cyan-400/10 px-1.5 py-0.5 text-[10px] font-bold text-cyan-200">
-                          真实
+                          {modeLabel === "真实数据" ? "真实" : "演示"}
                         </span>
                       </div>
                       <div className="relative mt-3 title-font text-2xl font-black text-cyan-300">
                         <CountUp to={p.value} duration={1.3} />
                       </div>
                       <div className="relative mt-1 text-[10px] text-white/40">
-                        {p.cityCount} 城市 · {p.topTool === "待点亮" ? "待点亮" : `最热 ${p.topTool}`}
+                        {p.cityCount} 城市 · 最热 {p.topTool}
                       </div>
                       <div className="relative mt-3 h-1.5 overflow-hidden rounded-full bg-white/[0.05]">
                         <div
@@ -538,7 +537,7 @@ export default function MapPage() {
                 </div>
                 <div className="mt-3 flex items-center gap-2 border-t border-emerald-500/15 pt-2 text-[10px] text-emerald-300/60">
                   <span>~</span>
-                  <span className="title-font">stream paused · refresh in {((4000 - (Date.now() % 4000)) / 1000).toFixed(1)}s</span>
+                  <span className="title-font">{hasRealData ? "真实城市记录" : "示例城市记录"}</span>
                 </div>
               </div>
             </StableGlassCard>
@@ -593,7 +592,7 @@ export default function MapPage() {
                         <CountUp to={t.count} duration={1.2} />
                       </span>
                       <span className="title-font w-12 text-right text-[11px] font-bold text-cyan-200">
-                        真实
+                        {modeLabel === "真实数据" ? "真实" : "演示"}
                       </span>
                     </div>
                   );

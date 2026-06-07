@@ -6,6 +6,8 @@ import { motion } from "framer-motion";
 import { ChevronRight, MapPin, Radio, Shield } from "lucide-react";
 import { generateAvatarSvg } from "@/lib/avatar";
 import { fetchLatestCards, type LatestCard } from "@/lib/api-client";
+import { demoPassports } from "@/data/demo";
+import { displayLevel } from "@/lib/display";
 
 type Props = {
   title: string;
@@ -33,7 +35,8 @@ export default function LatestCardStream({ title, eyebrow = "最新动态", ctaH
     };
   }, []);
 
-  const list = normalizeCards(cards);
+  const hasRealCards = cards.length > 0;
+  const list = normalizeCards(hasRealCards ? cards : demoPassports);
 
   return (
     <div className="relative overflow-hidden rounded-xl border border-neutral-200 bg-white p-5 sm:p-6">
@@ -44,7 +47,7 @@ export default function LatestCardStream({ title, eyebrow = "最新动态", ctaH
             {eyebrow}
           </p>
           <h2 className="text-xl font-medium tracking-[-0.02em] text-neutral-950 sm:text-2xl">{title}</h2>
-          <p className="mt-2 text-sm text-neutral-500">最近生成的 AI 身份卡会显示在这里，真实数据会随着用户提交逐步更新。</p>
+          <p className="mt-2 text-sm text-neutral-500">{hasRealCards ? "最近生成的 AI 身份卡会显示在这里。" : "当前展示演示身份卡，真实数据会随着用户提交逐步更新。"}</p>
         </div>
         <Link href={ctaHref} className="inline-flex items-center gap-1 self-start rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm font-medium text-neutral-700 transition-colors duration-150 hover:bg-neutral-50 sm:self-auto">
           {ctaLabel}
@@ -53,11 +56,6 @@ export default function LatestCardStream({ title, eyebrow = "最新动态", ctaH
       </motion.div>
 
       <div className="relative z-10 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {list.length === 0 && (
-          <div className="col-span-full rounded-lg border border-neutral-200 bg-neutral-50 p-8 text-center text-sm text-neutral-500">
-            暂无真实身份卡记录。用户完成身份卡生成后，最新记录会自动出现在这里。
-          </div>
-        )}
         {list.map((card, index) => (
           <motion.div
             key={`${card.card_slug || card.nickname}-${index}`}
@@ -76,11 +74,11 @@ export default function LatestCardStream({ title, eyebrow = "最新动态", ctaH
                     />
                     <div className="min-w-0">
                       <p className="truncate font-medium text-neutral-950">{card.nickname || "匿名 Agent"}</p>
-                      <p className="mt-0.5 truncate text-xs text-neutral-500">{card.ai_level_name || `Lv.${card.ai_level}`}</p>
+                      <p className="mt-0.5 truncate text-xs text-neutral-500">{card.ai_level_name || displayLevel(card.ai_level)}</p>
                     </div>
                   </div>
                   <span className="shrink-0 rounded border border-neutral-300 bg-neutral-50 px-2 py-1 text-[10px] text-neutral-600">
-                    Lv.{card.ai_level}
+                    {displayLevel(card.ai_level)}
                   </span>
                 </div>
                 <div className="mt-4 space-y-2 text-sm">
@@ -96,11 +94,11 @@ export default function LatestCardStream({ title, eyebrow = "最新动态", ctaH
                       <MapPin className="h-3.5 w-3.5 text-neutral-500" />
                       地区据点
                     </span>
-                    <span className="truncate font-medium text-neutral-950">{card.province || "浙江"}</span>
+                    <span className="truncate font-medium text-neutral-950">{card.province || "待填写"}</span>
                   </div>
                 </div>
                 <div className="mt-auto pt-3">
-                  <span className="text-[10px] tracking-[0.12em] text-neutral-400">记录 #{String(index + 1).padStart(2, "0")}</span>
+                  <span className="text-[10px] tracking-[0.12em] text-neutral-400">{hasRealCards ? "最新记录" : "演示记录"} #{String(index + 1).padStart(2, "0")}</span>
                 </div>
               </article>
             </Link>

@@ -33,6 +33,8 @@ import { PageShell, Section, SectionHeader, StatCard } from "@/components/ui";
 import { DataNotice } from "@/components/workbench";
 import { buildTrendsFromRanking, getTrends, getCategoryLabel, champion, topRisingTools } from "@/lib/trends-data";
 import { fetchRanking } from "@/lib/api-client";
+import { demoTrendsSnapshot } from "@/data/demo";
+import { hasOverviewData } from "@/lib/display";
 import { toolColor } from "@/data/mock";
 import type { ToolTrend, TrendsMatrix } from "@/lib/types";
 
@@ -72,7 +74,7 @@ const MATRIX_LABEL_TONE: Record<TrendsMatrix["label"], string> = {
 
 function StableTrendPanel({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`relative overflow-hidden rounded-xl border border-neutral-200 bg-white p-5 ${className}`}>
+    <div className={`app-card relative overflow-hidden rounded-xl p-5 ${className}`}>
       <div className="relative z-10">{children}</div>
     </div>
   );
@@ -90,7 +92,7 @@ function TrendRadarPanel({
   return (
     <motion.div
       initial={false}
-      className="relative overflow-hidden rounded-xl border border-neutral-200 bg-white p-5"
+      className="app-card relative overflow-hidden rounded-xl p-5"
     >
 
       <div className="relative z-10 flex items-center justify-between">
@@ -98,7 +100,7 @@ function TrendRadarPanel({
           <p className="title-font text-[10px] tracking-[0.18em] text-blue-600">热门工具概览</p>
           <h2 className="title-font mt-2 text-2xl font-black text-gray-950">热门工具概览</h2>
         </div>
-        <div className="rounded border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-[11px] text-neutral-500">
+        <div className="app-badge rounded px-3 py-1.5 text-[11px]">
           数据收集中
         </div>
       </div>
@@ -117,7 +119,7 @@ function TrendRadarPanel({
           return (
             <div
               key={tool.id}
-              className="absolute rounded border border-neutral-300 bg-white px-2 py-1 text-[11px] font-medium text-neutral-700"
+              className="app-badge absolute rounded px-2 py-1 text-[11px] font-medium"
               style={{
                 left: `${50 + x}%`,
                 top: `${50 + y}%`,
@@ -129,22 +131,22 @@ function TrendRadarPanel({
           );
         })}
 
-        <div className="relative flex h-32 w-32 flex-col items-center justify-center rounded-full border border-neutral-300 bg-neutral-50 text-center">
-          <p className="text-[10px] text-neutral-500">峰值热度</p>
-          <p className="text-4xl font-medium text-neutral-950">{topTool?.heat ?? 0}</p>
-          <p className="mt-1 text-xs font-medium text-neutral-600">{topTool?.name ?? "待点亮"}</p>
+        <div className="app-card-muted relative flex h-32 w-32 flex-col items-center justify-center rounded-full text-center">
+          <p className="app-soft text-[10px]">峰值热度</p>
+          <p className="app-heading text-4xl font-medium">{topTool?.heat ?? demoTrendsSnapshot.tools[0].heat}</p>
+          <p className="app-muted mt-1 text-xs font-medium">{topTool?.name ?? demoTrendsSnapshot.tools[0].name}</p>
         </div>
       </div>
 
       <div className="relative z-10 mt-5 grid gap-3 sm:grid-cols-3">
         {[
           ["今日新增", snapshot.todayNewSignals, "近 24 小时", "text-blue-600"],
-          ["热门工具", snapshot.fastestGrowing, "真实使用人数", "text-emerald-600"],
+          ["热门工具", snapshot.fastestGrowing, snapshot.generatedAt === "演示趋势" ? "演示样本" : "真实使用人数", "text-emerald-600"],
           ["最活跃场景", snapshot.mostActiveScene, `Agent ${snapshot.agentShare}%`, "text-amber-300/70"],
         ].map(([label, value, sub, toneClass]) => (
-          <div key={label} className="rounded-2xl border border-white/10 bg-black/35 p-4 backdrop-blur-xl">
-            <p className="text-[10px] uppercase tracking-[0.22em] text-white/40">{label}</p>
-            <p className="title-font mt-2 truncate text-2xl font-black text-white">{value}</p>
+          <div key={label} className="app-card-muted rounded-2xl p-4">
+            <p className="app-soft text-[10px] uppercase tracking-[0.22em]">{label}</p>
+            <p className="app-heading title-font mt-2 truncate text-2xl font-black">{value}</p>
             <p className={`mt-1 text-[10px] uppercase tracking-[0.2em] ${toneClass}`}>{sub}</p>
           </div>
         ))}
@@ -154,21 +156,23 @@ function TrendRadarPanel({
 }
 
 export default function TrendsPage() {
-  const [snapshot, setSnapshot] = useState(() => getTrends());
+  const [snapshot, setSnapshot] = useState(() => demoTrendsSnapshot);
   useEffect(() => {
     let active = true;
     fetchRanking()
       .then((ranking) => {
-        if (active) setSnapshot(buildTrendsFromRanking(ranking));
+        if (active) setSnapshot(hasOverviewData(ranking?.overview) ? buildTrendsFromRanking(ranking) : demoTrendsSnapshot);
       })
       .catch(() => {
-        if (active) setSnapshot(getTrends());
+        if (active) setSnapshot(demoTrendsSnapshot);
       });
     return () => {
       active = false;
     };
   }, []);
   const topTool = champion(snapshot);
+  const isDemo = snapshot.generatedAt === "演示趋势";
+  const modeLabel = isDemo ? "演示数据" : "真实数据";
   const rising = useMemo(() => topRisingTools(snapshot, 3), [snapshot]);
   const maxSignals = useMemo(
     () => Math.max(...snapshot.timeline.map((t) => t.signals), 1),
@@ -217,7 +221,7 @@ export default function TrendsPage() {
                 看看大家最近更常用哪些工具和场景。
               </p>
               <DataNotice className="mt-5 max-w-[680px]">
-                当前为早期工作台数据，真实工具趋势正在收集中；新增身份卡后会自动更新这里的排行和矩阵。
+                {isDemo ? "演示趋势 · 真实数据积累中。生成身份卡后这里会切换为真实统计。" : "真实工具趋势会随新增身份卡自动更新。"}
               </DataNotice>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -236,7 +240,7 @@ export default function TrendsPage() {
                 {[
                   ["统计工具", snapshot.tools.length, "工具"],
                   ["Agent 占比", snapshot.agentShare, "%"],
-                  ["峰值热度", topTool?.heat ?? 0, "HEAT"],
+                  ["峰值热度", topTool?.heat ?? demoTrendsSnapshot.tools[0].heat, "HEAT"],
                 ].map(([label, value, unit]) => (
                   <div key={label} className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 backdrop-blur-xl">
                     <p className="text-[10px] tracking-[0.16em] text-gray-500">{label}</p>
@@ -260,9 +264,9 @@ export default function TrendsPage() {
             className="mb-10"
           >
             <SectionHeader
-              eyebrow="Tool Heat Ranking"
+              eyebrow="工具热度"
               title="AI 工具热度榜"
-              description="按真实用户使用人数排序，热度由当前工具使用人数计算。"
+              description={isDemo ? "当前展示演示样本，真实用户数据正在积累中。" : "按真实用户使用人数排序，热度由当前工具使用人数计算。"}
               accent="cyan"
               trailing={
                 <Link href="/ranking" className="btn-rb-ghost !px-4 !py-2 !text-xs">
@@ -328,7 +332,7 @@ export default function TrendsPage() {
                         {tool.users} 人
                       </span>
                       <span className="inline-flex items-center gap-1 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-2.5 py-1 text-[10px] font-semibold text-cyan-100">
-                        真实数据
+                        {modeLabel}
                       </span>
                       <span className="title-font text-base font-black text-white">{tool.heat}</span>
                       <span className="text-[9px] uppercase tracking-[0.22em] text-white/30">Heat</span>
@@ -347,7 +351,7 @@ export default function TrendsPage() {
             className="mb-10"
           >
             <SectionHeader
-              eyebrow="Trend Matrix"
+              eyebrow="趋势矩阵"
               title="趋势矩阵"
               description="按场景划分的 AI 工具生态。每个象限代表一个独立的 AI 工作流。"
               accent="purple"
@@ -552,9 +556,9 @@ export default function TrendsPage() {
             className="mb-12"
           >
             <SectionHeader
-              eyebrow="Rising Champions"
-              title="真实热门工具"
-              description="基于用户身份卡里的真实工具使用次数排序。"
+              eyebrow="热门工具"
+              title="热门工具"
+              description={isDemo ? "当前为演示工具样本，真实提交后会自动更新。" : "基于用户身份卡里的真实工具使用次数排序。"}
               accent="amber"
               className="mb-6"
             />

@@ -12,6 +12,8 @@ import CountUp from "@/components/react-bits/CountUp";
 import { PageShell, Section } from "@/components/ui";
 import { DataNotice } from "@/components/workbench";
 import { toolColor } from "@/data/mock";
+import { demoRankingData, demoPassports } from "@/data/demo";
+import { dataModeLabel, displayLevel, hasOverviewData } from "@/lib/display";
 import { fetchLatestCards, fetchRanking, type LatestCard, type RankingData } from "@/lib/api-client";
 
 type ToolRank = { id: string; name: string; category: string; users: number; heat: number; growthRate: number };
@@ -143,7 +145,7 @@ function RowShell({
         <div className="text-base font-medium tabular-nums text-neutral-950 sm:text-lg">
           <CountUp to={value} duration={1.2} />
         </div>
-        <div className="mt-0.5 text-[10px] text-neutral-400">{typeof growth === "number" ? `+${growth}%` : "真实数据"}</div>
+        <div className="mt-0.5 text-[10px] text-neutral-400">{typeof growth === "number" ? `+${growth}%` : "数据收集中"}</div>
       </div>
     </div>
   );
@@ -168,7 +170,7 @@ function RoleCard({ r, rank }: { r: RoleRank; rank: number }) {
           </p>
           <p className="text-[10px] text-neutral-500">占比 {r.share}% · 常用 {r.topTool}</p>
         </div>
-        <span className="rounded border border-neutral-300 bg-white px-1.5 py-0.5 text-[10px] text-neutral-500">真实数据</span>
+        <span className="rounded border border-neutral-300 bg-white px-1.5 py-0.5 text-[10px] text-neutral-500">身份卡</span>
       </div>
       <div className="mt-2 h-[3px] overflow-hidden rounded-full bg-neutral-200">
         <div className="h-full rounded-full bg-neutral-950" style={{ width: `${Math.min(100, r.share * 3)}%` }} />
@@ -185,7 +187,7 @@ function PassportMiniCard({ p, rank }: { p: LatestPassport; rank: number }) {
           <RankBadge rank={rank} />
         <div className="rounded border border-neutral-300 px-1.5 py-0.5 font-mono text-[9px] text-neutral-500">{p.id}</div>
         </div>
-        <div className="rounded border border-neutral-300 bg-neutral-50 px-1.5 py-0.5 text-[10px] text-neutral-600">Lv.{String(p.level).padStart(2, "0")}</div>
+        <div className="rounded border border-neutral-300 bg-neutral-50 px-1.5 py-0.5 text-[10px] text-neutral-600">{displayLevel(p.level)}</div>
       </div>
       <div className="mt-3 flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-neutral-300 bg-neutral-50">
@@ -312,10 +314,10 @@ function EmptyRealData({ label }: { label: string }) {
 }
 
 function ChampionDashboard({ tools, cities, latest, roles }: { tools: ToolRank[]; cities: CityRank[]; latest: LatestPassport[]; roles: RoleRank[] }) {
-  const tool = tools[0] ?? { name: "待点亮", category: "真实数据", users: 0, heat: 0, growthRate: 0 };
-  const city = cities[0] ?? { city: "待点亮", province: "", users: 0, topRole: "AI 探索者", topTool: "未记录", growthRate: 0 };
-  const highest = latest.reduce((a, b) => (a.level > b.level ? a : b), latest[0] ?? { nickname: "待点亮", level: 0 });
-  const fastest = roles[0] ?? { role: "待点亮", users: 0, share: 0, topTool: "未记录", growthRate: 0, description: "", icon: Brain };
+  const tool = tools[0] ?? TOOL_RANKING[0];
+  const city = cities[0] ?? CITY_RANKING[0];
+  const highest = latest.reduce((a, b) => (a.level > b.level ? a : b), latest[0] ?? LATEST_PASSPORTS[0]);
+  const fastest = roles[0] ?? ROLE_RANKING[0];
   return (
     <div className="relative overflow-hidden rounded-xl border border-neutral-200 bg-white p-5 sm:p-6">
       <div className="relative border-l-4 border-neutral-950 pl-4">
@@ -332,14 +334,14 @@ function ChampionDashboard({ tools, cities, latest, roles }: { tools: ToolRank[]
           <p className="mt-1 text-3xl font-medium tracking-tight text-neutral-950">{tool.name}</p>
           <p className="mt-1 text-xs text-neutral-500">{tool.users} 人使用 · 类别 {tool.category}</p>
           <div className="mt-3 h-[3px] overflow-hidden rounded-full bg-neutral-200">
-            <div className="h-full rounded-full bg-neutral-950" style={{ width: `${Math.max(8, tool.heat)}%` }} />
+            <div className="h-full rounded-full bg-neutral-950" style={{ width: `${Math.max(12, Math.min(100, tool.heat))}%` }} />
           </div>
         </div>
 
         <div className="grid grid-cols-3 gap-2">
           {[
             { label: "热门城市", value: city.city, sub: `${city.users} 用户`, icon: MapPin, tone: "#22d3ee" },
-            { label: "最高等级", value: `Lv.${String(highest.level).padStart(2, "0")}`, sub: highest.nickname, icon: Trophy, tone: "#fbbf24" },
+            { label: "最高等级", value: displayLevel(highest.level), sub: highest.nickname, icon: Trophy, tone: "#fbbf24" },
             { label: "热门角色", value: fastest.role, sub: `${fastest.users} 人`, icon: TrendingUp, tone: "#10b981" }
           ].map((it) => {
             const Icon = it.icon;
@@ -383,24 +385,30 @@ export default function RankingPage() {
     };
   }, []);
 
-  const overview = ranking?.overview ?? { total: 0, agentUsers: 0, appUsers: 0, todayNew: 0 };
-  const toolRanking = useMemo(() => toToolRanking(ranking), [ranking]);
-  const cityRanking = useMemo(() => toCityRanking(ranking), [ranking]);
-  const provinceRanking = useMemo(() => toProvinceRanking(ranking), [ranking]);
-  const roleRanking = useMemo(() => toRoleRanking(ranking), [ranking]);
-  const latestPassports = useMemo(() => toLatestPassports(latestCards), [latestCards]);
+  const hasRealData = hasOverviewData(ranking?.overview);
+  const displayRanking = hasRealData ? ranking : demoRankingData;
+  const modeLabel = dataModeLabel(hasRealData);
+  const overview = displayRanking?.overview ?? demoRankingData.overview;
+  const toolRanking = useMemo(() => toToolRanking(displayRanking), [displayRanking]);
+  const cityRanking = useMemo(() => toCityRanking(displayRanking), [displayRanking]);
+  const provinceRanking = useMemo(() => toProvinceRanking(displayRanking), [displayRanking]);
+  const roleRanking = useMemo(() => toRoleRanking(displayRanking), [displayRanking]);
+  const latestPassports = useMemo(() => {
+    const real = toLatestPassports(latestCards);
+    return hasRealData && real.length ? real : toLatestPassports(demoPassports);
+  }, [hasRealData, latestCards]);
 
   const stats = useMemo(() => {
     const champTool = toolRanking[0];
     const champCity = cityRanking[0];
-    const highestLevel = latestPassports.reduce((a, b) => (a.level > b.level ? a : b), latestPassports[0] ?? { level: 0 });
+    const highestLevel = latestPassports.reduce((a, b) => (a.level > b.level ? a : b), latestPassports[0] ?? LATEST_PASSPORTS[0]);
     return [
       { label: "总上榜玩家", value: overview.total, icon: Users, tone: "#22d3ee" },
-      { label: "最热工具", value: champTool?.name ?? "待点亮", icon: Swords, tone: "#a855f7", isText: true },
-      { label: "最强城市", value: champCity ? `${champCity.city} · ${champCity.users}` : "待点亮", icon: MapPin, tone: "#fbbf24", isText: true },
-      { label: "最高等级", value: `Lv.${String(highestLevel.level).padStart(2, "0")}`, icon: Trophy, tone: "#fb7185", isText: true },
+      { label: "最热工具", value: champTool?.name ?? "Codex", icon: Swords, tone: "#a855f7", isText: true },
+      { label: "最强城市", value: champCity ? `${champCity.city} · ${champCity.users}` : "上海 · 184", icon: MapPin, tone: "#fbbf24", isText: true },
+      { label: "最高等级", value: displayLevel(highestLevel.level), icon: Trophy, tone: "#fb7185", isText: true },
       { label: "今日新增", value: overview.todayNew, icon: Sparkles, tone: "#10b981" },
-      { label: "热门角色", value: roleRanking[0]?.role ?? "待点亮", icon: TrendingUp, tone: "#06b6d4", isText: true }
+      { label: "热门角色", value: roleRanking[0]?.role ?? "代码指挥官", icon: TrendingUp, tone: "#06b6d4", isText: true }
     ];
   }, [cityRanking, latestPassports, overview.todayNew, overview.total, roleRanking, toolRanking]);
 
@@ -444,12 +452,12 @@ export default function RankingPage() {
                 </Link>
               </div>
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-3 text-[11px] text-gray-500">
-                <span className="flex items-center gap-1.5"><Crown className="h-3 w-3 text-amber-300" /> 实时更新</span>
+                <span className="flex items-center gap-1.5"><Crown className="h-3 w-3 text-amber-300" /> {hasRealData ? "真实数据" : "演示数据"}</span>
                 <span className="flex items-center gap-1.5"><Hash className="h-3 w-3 text-cyan-300" /> {overview.total} 名玩家入榜</span>
                 <span className="flex items-center gap-1.5"><Brain className="h-3 w-3 text-violet-300" /> 5 大分区实时切换</span>
               </div>
               <DataNotice>
-                排行榜基于真实身份卡提交记录计算；当前为早期数据收集阶段，榜单会随新提交自动刷新。
+                {hasRealData ? "排行榜基于真实身份卡提交记录计算，会随新提交自动刷新。" : "演示数据 · 等待真实用户点亮。生成身份卡后这里会切换为真实排行。"}
               </DataNotice>
             </motion.div>
             <motion.div initial={false}>
@@ -516,7 +524,7 @@ export default function RankingPage() {
                       key={t.id}
                       rank={i + 1}
                       primary={t.name}
-                      secondary={`${t.category} 阵营 · 来自真实身份卡`}
+                      secondary={`${t.category} 阵营 · ${modeLabel}`}
                       badge={t.category}
                       value={t.users}
                       energy={t.heat}

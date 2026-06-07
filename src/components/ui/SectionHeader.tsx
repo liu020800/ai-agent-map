@@ -11,10 +11,10 @@ type SectionHeaderProps = {
 };
 
 const ACCENT_BG = {
-  cyan: "bg-[#22d3ee]/12 text-[#22d3ee] ring-[#22d3ee]/30",
-  purple: "bg-[#8b5cf6]/12 text-[#8b5cf6] ring-[#8b5cf6]/30",
-  green: "bg-[#22c55e]/12 text-[#22c55e] ring-[#22c55e]/30",
-  amber: "bg-[#f59e0b]/12 text-[#f59e0b] ring-[#f59e0b]/30",
+  cyan: "app-badge",
+  purple: "app-badge",
+  green: "app-badge",
+  amber: "app-badge",
 } as const;
 
 export function SectionHeader({
@@ -38,11 +38,11 @@ export function SectionHeader({
             {eyebrow}
           </span>
         ) : null}
-        <h2 className="text-balance text-2xl font-semibold leading-tight text-slate-50 sm:text-3xl lg:text-4xl">
+        <h2 className="app-heading text-balance text-2xl font-semibold leading-tight sm:text-3xl lg:text-4xl">
           {title}
         </h2>
         {description ? (
-          <p className="max-w-2xl text-sm leading-relaxed text-slate-400 sm:text-base">{description}</p>
+          <p className="app-muted max-w-2xl text-sm leading-relaxed sm:text-base">{description}</p>
         ) : null}
       </div>
       {trailing ? <div className="flex shrink-0 items-center gap-3">{trailing}</div> : null}

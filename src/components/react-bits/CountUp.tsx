@@ -17,7 +17,7 @@ interface CountUpProps {
 
 export default function CountUp({
   to,
-  from = 0,
+  from,
   direction = "up",
   delay = 0,
   duration = 2,
@@ -26,8 +26,9 @@ export default function CountUp({
   separator = "",
   onEnd,
 }: CountUpProps) {
+  const startValue = from ?? to;
   const ref = useRef<HTMLSpanElement>(null);
-  const motionValue = useMotionValue(direction === "down" ? to : from);
+  const motionValue = useMotionValue(direction === "down" ? to : startValue);
   const damping = 20 + 40 * (1 / duration);
   const stiffness = 100 * (1 / duration);
   const springValue = useSpring(motionValue, { damping, stiffness });
@@ -42,7 +43,7 @@ export default function CountUp({
     return 0;
   };
 
-  const maxDecimals = Math.max(getDecimalPlaces(from), getDecimalPlaces(to));
+  const maxDecimals = Math.max(getDecimalPlaces(startValue), getDecimalPlaces(to));
 
   const formatValue = useCallback(
     (latest: number) => {
@@ -59,18 +60,18 @@ export default function CountUp({
   );
 
   useEffect(() => {
-    if (ref.current) ref.current.textContent = formatValue(direction === "down" ? to : from);
-  }, [from, to, direction, formatValue]);
+    if (ref.current) ref.current.textContent = formatValue(direction === "down" ? to : startValue);
+  }, [startValue, to, direction, formatValue]);
 
   useEffect(() => {
     if (isInView && startWhen) {
       const timeoutId = setTimeout(() => {
-        motionValue.set(direction === "down" ? from : to);
+        motionValue.set(direction === "down" ? startValue : to);
       }, delay * 1000);
       const durationTimeoutId = setTimeout(() => { onEnd?.(); }, delay * 1000 + duration * 1000);
       return () => { clearTimeout(timeoutId); clearTimeout(durationTimeoutId); };
     }
-  }, [isInView, startWhen, motionValue, direction, from, to, delay, onEnd, duration]);
+  }, [isInView, startWhen, motionValue, direction, startValue, to, delay, onEnd, duration]);
 
   useEffect(() => {
     const unsubscribe = springValue.on("change", (latest: number) => {
@@ -79,5 +80,5 @@ export default function CountUp({
     return () => unsubscribe();
   }, [springValue, formatValue]);
 
-  return <span className={className} ref={ref} suppressHydrationWarning>{formatValue(direction === "down" ? to : from)}</span>;
+  return <span className={className} ref={ref} suppressHydrationWarning>{formatValue(direction === "down" ? to : startValue)}</span>;
 }

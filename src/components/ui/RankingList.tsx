@@ -17,7 +17,7 @@ const TREND_COLOR = {
 export function RankingList({ items, unit, empty = "暂无数据" }: RankingListProps) {
   if (!items.length) {
     return (
-      <div className="rounded-xl border border-white/[0.05] bg-white/[0.01] p-6 text-center text-sm text-slate-500">
+      <div className="app-card-muted rounded-xl p-6 text-center text-sm">
         {empty}
       </div>
     );
@@ -30,19 +30,19 @@ export function RankingList({ items, unit, empty = "暂无数据" }: RankingList
         return (
           <li
             key={it.name}
-            className="group relative flex items-center gap-3 overflow-hidden rounded-xl border border-white/[0.05] bg-white/[0.01] px-3 py-2.5 transition-colors hover:border-white/[0.1] hover:bg-white/[0.02]"
+            className="app-card group relative flex items-center gap-3 overflow-hidden rounded-xl px-3 py-2.5 transition-colors hover:border-[var(--app-border-strong)]"
           >
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/[0.05] bg-white/[0.02] font-mono text-xs text-slate-400">
+            <span className="app-badge flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-mono text-xs">
               {String(idx + 1).padStart(2, "0")}
             </span>
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-2">
-                <span className="truncate text-sm font-medium text-slate-100">{it.name}</span>
+                <span className="app-heading truncate text-sm font-medium">{it.name}</span>
                 <span className="flex items-baseline gap-1.5">
-                  <span className="font-mono text-sm font-semibold text-slate-100">
+                  <span className="app-heading font-mono text-sm font-semibold">
                     {it.count.toLocaleString()}
                   </span>
-                  {unit ? <span className="text-[10px] text-slate-500">{unit}</span> : null}
+                  {unit ? <span className="app-soft text-[10px]">{unit}</span> : null}
                   {it.delta ? (
                     <span className={`text-[10px] ${TREND_COLOR[it.trend ?? "flat"]}`}>
                       {TREND_GLYPH[it.trend ?? "flat"]} {it.delta}
@@ -51,7 +51,7 @@ export function RankingList({ items, unit, empty = "暂无数据" }: RankingList
                 </span>
               </div>
               <div
-                className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-white/[0.04]"
+                className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-[var(--app-surface-muted)]"
                 aria-hidden
               >
                 <div
@@ -81,8 +81,8 @@ export function TagCloud({ items, title }: TagCloudProps) {
     <CyberCard variant="subtle" className="p-4 sm:p-5">
       {title ? (
         <div className="mb-3 flex items-center justify-between">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">{title}</span>
-          <span className="text-[10px] text-slate-500">{items.length} 个</span>
+          <span className="app-muted text-xs font-semibold uppercase tracking-wider">{title}</span>
+          <span className="app-soft text-[10px]">{items.length} 个</span>
         </div>
       ) : null}
       <div className="flex flex-wrap gap-2">
