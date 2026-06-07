@@ -59,7 +59,7 @@ export default function HomePage() {
           </div>
           {displayTools.length === 0 ? (
             <div className="rounded-3xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-500 shadow-sm">
-              暂无真实工具统计。用户生成第一张身份卡后，这里会自动显示工具热度。
+              演示工具热度。用户生成第一张身份卡后，这里会自动更新工具热度。
             </div>
           ) : (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">

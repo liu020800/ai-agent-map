@@ -172,7 +172,7 @@ export default function TrendsPage() {
   }, []);
   const topTool = champion(snapshot);
   const isDemo = snapshot.generatedAt === "演示趋势";
-  const modeLabel = isDemo ? "演示数据" : "真实数据";
+  const modeLabel = isDemo ? "演示数据" : "用户提交记录";
   const rising = useMemo(() => topRisingTools(snapshot, 3), [snapshot]);
   const maxSignals = useMemo(
     () => Math.max(...snapshot.timeline.map((t) => t.signals), 1),
@@ -221,7 +221,7 @@ export default function TrendsPage() {
                 看看大家最近更常用哪些工具和场景。
               </p>
               <DataNotice className="mt-5 max-w-[680px]">
-                {isDemo ? "演示趋势 · 真实数据积累中。生成身份卡后这里会切换为真实统计。" : "真实工具趋势会随新增身份卡自动更新。"}
+                演示趋势 · 用户提交身份卡后会自动更新统计。
               </DataNotice>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -281,7 +281,7 @@ export default function TrendsPage() {
               <ul className="space-y-2.5">
                 {snapshot.tools.length === 0 && (
                   <li className="rounded-2xl border border-cyan-300/12 bg-cyan-300/[0.04] p-6 text-center text-sm text-cyan-100/75">
-                    暂无真实工具趋势。用户生成身份卡后，这里会自动显示真实工具热度。
+                    当前展示演示工具趋势。用户生成身份卡后，这里会自动更新工具热度。
                   </li>
                 )}
                 {snapshot.tools.map((tool, index) => {
@@ -361,7 +361,7 @@ export default function TrendsPage() {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {snapshot.matrix.length === 0 && (
                 <div className="col-span-full rounded-2xl border border-violet-300/12 bg-violet-300/[0.04] p-6 text-center text-sm text-violet-100/75">
-                  暂无真实趋势矩阵数据。用户生成身份卡后，系统会按工具使用场景自动计算矩阵热度。
+                  当前展示演示趋势矩阵。用户生成身份卡后，系统会按工具使用场景自动计算矩阵热度。
                 </div>
               )}
               {snapshot.matrix.map((cell) => {
@@ -460,7 +460,7 @@ export default function TrendsPage() {
               <div className="grid grid-cols-7 gap-2 sm:gap-3">
                 {snapshot.timeline.length === 0 && (
                   <div className="col-span-7 rounded-2xl border border-cyan-300/12 bg-cyan-300/[0.04] p-6 text-center text-sm text-cyan-100/75">
-                    暂无 7 天真实趋势数据，新的身份卡提交会写入这里。
+                    当前展示 7 天演示趋势，新的身份卡提交会写入这里。
                   </div>
                 )}
                 {snapshot.timeline.map((point, i) => {
@@ -518,7 +518,7 @@ export default function TrendsPage() {
               <div className="space-y-3">
                 {snapshot.roleDistribution.length === 0 && (
                   <div className="rounded-2xl border border-violet-300/12 bg-violet-300/[0.04] p-5 text-center text-sm text-violet-100/75">
-                    暂无真实角色分布。
+                    当前展示演示角色分布。
                   </div>
                 )}
                 {snapshot.roleDistribution.map((role) => (
@@ -565,7 +565,7 @@ export default function TrendsPage() {
             <div className="grid gap-4 sm:grid-cols-3">
               {rising.length === 0 && (
                 <div className="col-span-full rounded-2xl border border-amber-300/12 bg-amber-300/[0.04] p-6 text-center text-sm text-amber-100/75">
-                  暂无真实热门工具。
+                  当前展示演示热门工具。
                 </div>
               )}
               {rising.map((tool, index) => {

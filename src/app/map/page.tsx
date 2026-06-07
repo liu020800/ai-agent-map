@@ -13,7 +13,7 @@ import { DataNotice } from "@/components/workbench";
 import ChinaSvgMap from "@/components/ChinaSvgMap";
 import { toolColor } from "@/data/mock";
 import { demoRankingData } from "@/data/demo";
-import { dataModeLabel, hasOverviewData } from "@/lib/display";
+import { hasOverviewData } from "@/lib/display";
 import { SURVEY_PROVINCES } from "@/lib/survey-service";
 import { fetchRanking, type RankingData } from "@/lib/api-client";
 
@@ -300,15 +300,20 @@ function buildToolSignals(ranking: RankingData | null): ToolSignal[] {
 
 function buildCityLog(ranking: RankingData | null): CitySignal[] {
   const cities = ranking?.cities ?? [];
-  const now = new Date();
-  return cities.slice(0, 8).map((city, index) => ({
-    time: new Date(now.getTime() - index * 5 * 60 * 1000).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" }),
+  const baseMinutes = 12 * 60 + 31;
+  return cities.slice(0, 8).map((city, index) => {
+    const minutes = baseMinutes - index * 5;
+    const hour = String(Math.floor(minutes / 60)).padStart(2, "0");
+    const minute = String(minutes % 60).padStart(2, "0");
+    return {
+      time: `${hour}:${minute}`,
     city: city.city,
     province: city.province,
     role: city.topRole,
     tool: city.topTool,
     tone: toolColor(city.topTool),
-  }));
+    };
+  });
 }
 
 function buildCampDistribution(ranking: RankingData | null): CampSignal[] {
@@ -341,7 +346,6 @@ export default function MapPage() {
 
   const hasRealData = hasOverviewData(ranking?.overview);
   const displayRanking = hasRealData ? ranking : demoRankingData;
-  const modeLabel = dataModeLabel(hasRealData);
   const overview = displayRanking?.overview ?? demoRankingData.overview;
   const provinces = useMemo(() => buildProvinceSignals(displayRanking), [displayRanking]);
   const activeProvinces = provinces.filter((p) => p.value > 0);
@@ -382,7 +386,7 @@ export default function MapPage() {
                 全国 <span className="text-blue-700">AI 玩家地图</span>
               </h1>
               <p className="max-w-[560px] text-base font-medium text-gray-600 sm:text-lg">
-                看看不同地区的朋友都在用哪些 AI 工具。当前为早期测试数据，真实数据正在收集中。
+                看看不同地区的朋友都在用哪些 AI 工具。当前为演示数据，用户提交后会自动更新。
               </p>
               <div className="flex flex-wrap gap-3 pt-2">
                 <Link href="/survey" className="btn-rb-fill">
@@ -398,7 +402,7 @@ export default function MapPage() {
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-3 text-[11px] text-gray-500">
                 <span className="flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-                  {hasRealData ? "真实数据更新中" : "演示数据预览"}
+                  演示数据预览
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Activity className="h-3 w-3 text-cyan-300" />
@@ -410,7 +414,7 @@ export default function MapPage() {
                 </span>
               </div>
               <DataNotice>
-                {hasRealData ? "当前显示真实身份卡记录，地图分布会随用户提交自动更新。" : "当前为演示数据 · 真实身份卡记录正在收集中。"}
+                当前为演示数据 · 用户提交身份卡后会自动更新地图分布。
               </DataNotice>
             </motion.div>
 
@@ -467,7 +471,7 @@ export default function MapPage() {
                           <p className="mt-0.5 text-[10px] uppercase tracking-[0.2em] text-white/35">0{i + 1}</p>
                         </div>
                         <span className="title-font rounded-md border border-cyan-400/20 bg-cyan-400/10 px-1.5 py-0.5 text-[10px] font-bold text-cyan-200">
-                          {modeLabel === "真实数据" ? "真实" : "演示"}
+                          演示
                         </span>
                       </div>
                       <div className="relative mt-3 title-font text-2xl font-black text-cyan-300">
@@ -496,15 +500,15 @@ export default function MapPage() {
                 </div>
                 <span className="flex items-center gap-1.5 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-[10px] font-bold text-emerald-300">
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
-                  REALTIME
+                  示例信号
                 </span>
               </div>
               <div className="rounded-2xl border border-emerald-500/20 bg-black/40 p-4 font-mono">
                 <div className="mb-3 flex items-center justify-between border-b border-emerald-500/15 pb-2 text-[10px] text-emerald-300/70">
-                  <span>$ tail -f /var/log/agent-signal.log</span>
+                  <span>演示城市记录 · 用户提交后自动更新</span>
                   <span className="flex items-center gap-1.5">
                     <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
-                    streaming
+                    示例记录
                   </span>
                 </div>
                 <div className="max-h-[360px] space-y-1.5 overflow-y-auto pr-1">
@@ -537,7 +541,7 @@ export default function MapPage() {
                 </div>
                 <div className="mt-3 flex items-center gap-2 border-t border-emerald-500/15 pt-2 text-[10px] text-emerald-300/60">
                   <span>~</span>
-                  <span className="title-font">{hasRealData ? "真实城市记录" : "示例城市记录"}</span>
+                  <span className="title-font">示例城市记录</span>
                 </div>
               </div>
             </StableGlassCard>
@@ -592,7 +596,7 @@ export default function MapPage() {
                         <CountUp to={t.count} duration={1.2} />
                       </span>
                       <span className="title-font w-12 text-right text-[11px] font-bold text-cyan-200">
-                        {modeLabel === "真实数据" ? "真实" : "演示"}
+                        演示
                       </span>
                     </div>
                   );

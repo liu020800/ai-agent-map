@@ -308,7 +308,7 @@ function toLatestPassports(cards: LatestCard[]): LatestPassport[] {
 function EmptyRealData({ label }: { label: string }) {
   return (
     <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-6 text-center text-sm text-neutral-500">
-      暂无真实{label}数据，生成第一张身份卡后这里会自动更新。
+      当前展示演示{label}数据，生成第一张身份卡后这里会自动更新。
     </div>
   );
 }
@@ -452,12 +452,12 @@ export default function RankingPage() {
                 </Link>
               </div>
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-3 text-[11px] text-gray-500">
-                <span className="flex items-center gap-1.5"><Crown className="h-3 w-3 text-amber-300" /> {hasRealData ? "真实数据" : "演示数据"}</span>
+                <span className="flex items-center gap-1.5"><Crown className="h-3 w-3 text-amber-300" /> 演示数据</span>
                 <span className="flex items-center gap-1.5"><Hash className="h-3 w-3 text-cyan-300" /> {overview.total} 名玩家入榜</span>
                 <span className="flex items-center gap-1.5"><Brain className="h-3 w-3 text-violet-300" /> 5 大分区实时切换</span>
               </div>
               <DataNotice>
-                {hasRealData ? "排行榜基于真实身份卡提交记录计算，会随新提交自动刷新。" : "演示数据 · 等待真实用户点亮。生成身份卡后这里会切换为真实排行。"}
+                演示数据 · 用户生成身份卡后会自动加入榜单。
               </DataNotice>
             </motion.div>
             <motion.div initial={false}>

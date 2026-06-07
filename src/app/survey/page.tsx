@@ -96,17 +96,15 @@ export default function SurveyPage() {
   const [signature, setSignature] = useState<string>("");
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>("idle");
   const [submitMessage, setSubmitMessage] = useState<string>("");
-  const [identityId, setIdentityId] = useState<string>(generateIdentityId());
-  const [createdAt, setCreatedAt] = useState<string>(new Date().toISOString());
+  const [identityId, setIdentityId] = useState<string>("AAM-2026-0000");
+  const [createdAt, setCreatedAt] = useState<string>("2026-01-01T00:00:00.000Z");
   const [downloaded, setDownloaded] = useState(false);
   const [copied, setCopied] = useState<"text" | "link" | null>(null);
   const [existingCard, setExistingCard] = useState<AgentCardRecord | null>(null);
   const [recoverNickname, setRecoverNickname] = useState("");
   const [recoverResults, setRecoverResults] = useState<AgentCardRecord[]>([]);
   const [checkingExisting, setCheckingExisting] = useState(true);
-  const [cardSeed, setCardSeed] = useState<string>(() =>
-    typeof window === "undefined" ? "" : Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
-  );
+  const [cardSeed, setCardSeed] = useState<string>("demo-card-seed");
 
   useEffect(() => {
     let active = true;
@@ -151,7 +149,7 @@ export default function SurveyPage() {
 
   const toolCount = tools.length;
   const scenarioCount = scenarios.length;
-  const provinceText = province && city ? `${province} · ${city}` : province || "待填写";
+  const provinceText = province && city ? `${province} · ${city}` : "待填写";
   const sortedSurveyTools = useMemo(() => {
     const priority = userType === "agent" ? AGENT_PRIORITY_TOOLS : APP_PRIORITY_TOOLS;
     return [...SURVEY_TOOLS].sort((a, b) => {
@@ -911,8 +909,8 @@ function LivePreview({
   signal: number;
 }) {
   const scenarioNames = SURVEY_SCENARIOS.filter((s) => scenarios.includes(s.id)).map((s) => s.name);
-  const provinceText = province && city ? `${province} · ${city}` : province || "待填写";
-  const previewSignature = signature.trim() || (tools.length && scenarioNames.length && province !== "" ? `我是 ${role.title}，常用 ${tools.length} 个 AI 工具，来自 ${provinceText}。` : "完成选择后自动生成");
+  const provinceText = province && city ? `${province} · ${city}` : "待填写";
+  const previewSignature = signature.trim() || (tools.length > 0 && scenarioNames.length > 0 && province.trim() !== "" && city.trim() !== "" ? `我是 ${role.title}，常用 ${tools.length} 个 AI 工具，来自 ${provinceText}。` : "完成选择后自动生成");
 
   return (
     <div className="space-y-3">

@@ -47,7 +47,7 @@ export default function LatestCardStream({ title, eyebrow = "最新动态", ctaH
             {eyebrow}
           </p>
           <h2 className="text-xl font-medium tracking-[-0.02em] text-neutral-950 sm:text-2xl">{title}</h2>
-          <p className="mt-2 text-sm text-neutral-500">{hasRealCards ? "最近生成的 AI 身份卡会显示在这里。" : "当前展示演示身份卡，真实数据会随着用户提交逐步更新。"}</p>
+          <p className="mt-2 text-sm text-neutral-500">{hasRealCards ? "最近生成的 AI 身份卡会显示在这里。" : "当前展示演示身份卡，真实记录会随用户提交逐步更新。"}</p>
         </div>
         <Link href={ctaHref} className="inline-flex items-center gap-1 self-start rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm font-medium text-neutral-700 transition-colors duration-150 hover:bg-neutral-50 sm:self-auto">
           {ctaLabel}

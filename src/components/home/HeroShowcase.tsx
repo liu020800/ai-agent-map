@@ -101,7 +101,7 @@ export default function HeroShowcase({ overview, topProvinces = [], topTool = nu
                 </div>
                 <div className="order-1 flex flex-col gap-3 lg:order-2">
                   <SideMetric icon={Trophy} label="热门地区" value={safeTopProvinces[0] || "广东"} sub={`${hasRealData ? "真实" : "演示"}排行 · 次热 ${safeTopProvinces[1] || "上海"}`} />
-                  <SideMetric icon={Workflow} label="常用工具" value={safeTopTool.name} sub={`${safeTopTool.count} 人使用 · ${hasRealData ? "真实数据" : "演示数据"}`} />
+                  <SideMetric icon={Workflow} label="常用工具" value={safeTopTool.name} sub={`${safeTopTool.count} 人使用 · ${hasRealData ? "用户提交记录" : "演示数据"}`} />
                   <SideMetric icon={Crosshair} label="今日新增" value={displayPlus(safeOverview.todayNew)} sub="近 24h 新增身份" />
                 </div>
               </div>

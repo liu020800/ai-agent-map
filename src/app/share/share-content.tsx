@@ -22,6 +22,11 @@ function readCardIdFromUrl() {
   return params.get("cardId") || params.get("slug") || "";
 }
 
+function normalizeSignalStrength(value: unknown, fallback = 87): number {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return fallback;
+  return Math.min(100, Math.round(n));
+}
 function buildShareText(card: AgentCardRecord) {
   return `我已点亮 AI Agent Map，生成了我的全国 AI 信号身份卡。\n\n昵称：${card.nickname}\nID：${card.cardId}\n节点：${card.province}${card.city || ""}\n工具：${card.tools.join(" / ")}\n\n你也来生成一张：\n${card.shareUrl}`;
 }
@@ -136,6 +141,7 @@ export default function ShareContent() {
   }, []);
 
   const shareText = useMemo(() => (card ? buildShareText(card) : ""), [card]);
+  const signalStrength = useMemo(() => normalizeSignalStrength((card as { signalStrength?: unknown; signal_strength?: unknown } | null)?.signalStrength ?? (card as { signalStrength?: unknown; signal_strength?: unknown } | null)?.signal_strength), [card]);
 
   const copyText = useCallback(async () => {
     if (!card) return;
@@ -236,6 +242,7 @@ export default function ShareContent() {
                     <p><MapPin className="mr-2 inline h-4 w-4 text-blue-600" />{card.province}{card.city}</p>
                     <p><Sparkles className="mr-2 inline h-4 w-4 text-violet-600" />{card.tools.join(" / ")}</p>
                     <p>{card.signature || "用 AI 扩展自己的能力边界"}</p>
+                    <p>信号强度：{signalStrength}%</p>
                     <p className="text-xs text-gray-400">创建时间：{new Date(card.createdAt).toLocaleString("zh-CN")}</p>
                   </div>
                 </div>
