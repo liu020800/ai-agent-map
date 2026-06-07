@@ -8,6 +8,12 @@ export const demoOverview = {
   todayNew: 42,
 };
 
+export const DEMO_OVERVIEW = {
+  ...demoOverview,
+  topProvince: "广东",
+  topTool: "Codex",
+};
+
 export const demoTools = [
   { name: "Codex", count: 188 },
   { name: "Claude Code", count: 162 },
@@ -33,12 +39,36 @@ export const demoProvinces = [
   { name: "陕西", value: 82 },
 ];
 
+export const DEMO_PROVINCES = [
+  { province: "广东", users: 188, cityCount: 9, topTool: "Codex", growthRate: 16 },
+  { province: "北京", users: 164, cityCount: 6, topTool: "Claude Code", growthRate: 12 },
+  { province: "上海", users: 152, cityCount: 5, topTool: "Cursor", growthRate: 18 },
+  { province: "浙江", users: 136, cityCount: 7, topTool: "Dify", growthRate: 14 },
+  { province: "江苏", users: 121, cityCount: 8, topTool: "DeepSeek", growthRate: 11 },
+  { province: "四川", users: 96, cityCount: 5, topTool: "Kimi", growthRate: 9 },
+];
+
 export const demoCities = [
   { city: "上海", province: "上海", count: 184, topRole: "代码指挥官", topTool: "Codex" },
   { city: "深圳", province: "广东", count: 142, topRole: "自动化玩家", topTool: "n8n" },
   { city: "杭州", province: "浙江", count: 128, topRole: "知识库构建者", topTool: "Dify" },
   { city: "北京", province: "北京", count: 156, topRole: "本地模型驯养师", topTool: "Ollama" },
   { city: "成都", province: "四川", count: 84, topRole: "内容生产者", topTool: "Kimi" },
+];
+
+export const DEMO_CITY_SIGNALS = [
+  { time: "12:31", city: "上海", role: "代码指挥官", tool: "Codex" },
+  { time: "12:28", city: "深圳", role: "自动化玩家", tool: "n8n" },
+  { time: "12:22", city: "杭州", role: "知识库构建者", tool: "Dify" },
+  { time: "12:16", city: "北京", role: "本地模型驯养师", tool: "Ollama" },
+];
+
+export const DEMO_TOOLS = [
+  { name: "Codex", users: 256, heat: 92 },
+  { name: "Claude Code", users: 214, heat: 84 },
+  { name: "DeepSeek", users: 188, heat: 78 },
+  { name: "豆包", users: 166, heat: 72 },
+  { name: "Kimi", users: 132, heat: 63 },
 ];
 
 export const demoRoles = [

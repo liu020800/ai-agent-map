@@ -6,7 +6,7 @@ import { ArrowRight, Map, Shield, Crosshair, Trophy, Workflow } from "lucide-rea
 import CountUp from "@/components/react-bits/CountUp";
 import AgentPassportPreview from "./AgentPassportPreview";
 import { demoOverview, demoProvinces, demoTools } from "@/data/demo";
-import { hasOverviewData } from "@/lib/display";
+import { displayPlus, hasOverviewData } from "@/lib/display";
 
 type HeroOverview = {
   total: number;
@@ -19,11 +19,12 @@ type HeroShowcaseProps = {
   overview?: HeroOverview | null;
   topProvinces?: string[];
   topTool?: { name: string; count: number } | null;
+  hasRealData?: boolean;
 };
 
-export default function HeroShowcase({ overview, topProvinces = [], topTool = null }: HeroShowcaseProps) {
-  const hasRealData = hasOverviewData(overview);
-  const safeOverview: HeroOverview = hasRealData ? overview! : demoOverview;
+export default function HeroShowcase({ overview, topProvinces = [], topTool = null, hasRealData: hasRealDataProp }: HeroShowcaseProps) {
+  const hasRealData = hasRealDataProp ?? hasOverviewData(overview);
+  const safeOverview: HeroOverview = hasRealData && overview ? overview : demoOverview;
   const safeTopProvinces = topProvinces.length ? topProvinces : demoProvinces.slice(0, 3).map((province) => province.name);
   const safeTopTool = topTool ?? demoTools[0];
   const stats = [
@@ -101,7 +102,7 @@ export default function HeroShowcase({ overview, topProvinces = [], topTool = nu
                 <div className="order-1 flex flex-col gap-3 lg:order-2">
                   <SideMetric icon={Trophy} label="热门地区" value={safeTopProvinces[0] || "广东"} sub={`${hasRealData ? "真实" : "演示"}排行 · 次热 ${safeTopProvinces[1] || "上海"}`} />
                   <SideMetric icon={Workflow} label="常用工具" value={safeTopTool.name} sub={`${safeTopTool.count} 人使用 · ${hasRealData ? "真实数据" : "演示数据"}`} />
-                  <SideMetric icon={Crosshair} label="今日新增" value={`+${safeOverview.todayNew}`} sub="近 24h 新增身份" />
+                  <SideMetric icon={Crosshair} label="今日新增" value={displayPlus(safeOverview.todayNew)} sub="近 24h 新增身份" />
                 </div>
               </div>
             </div>

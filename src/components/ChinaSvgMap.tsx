@@ -177,14 +177,14 @@ export default function ChinaSvgMap({ data = [] }: { data?: MapDatum[] }) {
   if (!renderData) {
     return (
       <div className="flex h-full min-h-[320px] items-center justify-center rounded-xl border border-neutral-200 bg-neutral-50 text-sm text-neutral-500">
-        全国使用预览准备中
+        全国信号预览
       </div>
     );
   }
 
   return (
     <div className="relative h-full min-h-[320px] w-full overflow-hidden rounded-xl bg-neutral-50">
-      <svg viewBox="0 0 100 100" className="h-full w-full" role="img" aria-label="中国地图真实省份热力图">
+      <svg viewBox="0 0 100 100" className="h-full w-full" role="img" aria-label="中国地图省份热力预览">
         <defs>
           <radialGradient id="chinaSvgDot" cx="50%" cy="50%" r="50%">
             <stop stopColor="#111111" stopOpacity="0.32" />

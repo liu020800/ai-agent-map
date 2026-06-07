@@ -1,15 +1,25 @@
+export function isPositiveNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
 export function hasPositiveData(value?: number | null) {
-  return typeof value === "number" && value > 0;
+  return isPositiveNumber(value);
 }
 
-export function displayCount(value?: number | null, fallback = "—") {
-  if (!hasPositiveData(value)) return fallback;
-  return Number(value).toLocaleString("zh-CN");
+export function displayCount(value: unknown, fallback = "—") {
+  return isPositiveNumber(value) ? value.toLocaleString("zh-CN") : fallback;
 }
 
-export function displayLevel(level?: number | null) {
-  if (!hasPositiveData(level)) return "—";
-  return `Lv.${String(level).padStart(2, "0")}`;
+export function displayPlus(value: unknown, fallback = "即将点亮") {
+  return isPositiveNumber(value) ? `+${value}` : fallback;
+}
+
+export function displayLevel(value: unknown, fallback = "—") {
+  return isPositiveNumber(value) ? `Lv.${String(value).padStart(2, "0")}` : fallback;
+}
+
+export function displayPercent(value: unknown, fallback = "—") {
+  return isPositiveNumber(value) ? `${value}%` : fallback;
 }
 
 export function hasOverviewData(overview?: { total?: number | null } | null) {

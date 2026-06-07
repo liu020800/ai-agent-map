@@ -44,7 +44,7 @@ export default function HomePage() {
 
   return (
     <main id="main-content" className="relative min-h-screen">
-      <HeroShowcase overview={overview} topProvinces={topProvinces} topTool={topTool} />
+      <HeroShowcase overview={overview} topProvinces={topProvinces} topTool={topTool} hasRealData={hasRealData} />
 
       <Section className="relative z-10" spacing="md">
         <PageShell>
