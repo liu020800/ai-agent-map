@@ -127,10 +127,11 @@ function featureCenter(feature: Feature, bounds: { minLng: number; maxLng: numbe
 
 function heatColor(value: number, max: number) {
   const ratio = max > 0 ? value / max : 0;
-  if (ratio > 0.78) return "rgba(34, 211, 238, 0.52)";
-  if (ratio > 0.52) return "rgba(96, 165, 250, 0.38)";
-  if (ratio > 0.28) return "rgba(168, 85, 247, 0.28)";
-  return "rgba(15, 23, 42, 0.72)";
+  if (value <= 0) return "#e8e8e8";
+  if (ratio > 0.78) return "rgba(17, 17, 17, 0.86)";
+  if (ratio > 0.52) return "rgba(17, 17, 17, 0.64)";
+  if (ratio > 0.28) return "rgba(17, 17, 17, 0.42)";
+  return "rgba(17, 17, 17, 0.22)";
 }
 
 export default function ChinaSvgMap({ data = [] }: { data?: MapDatum[] }) {
@@ -175,38 +176,31 @@ export default function ChinaSvgMap({ data = [] }: { data?: MapDatum[] }) {
 
   if (!renderData) {
     return (
-      <div className="flex h-full min-h-[320px] items-center justify-center rounded-2xl border border-cyan-300/10 bg-black/20 text-sm text-cyan-200/70">
+      <div className="flex h-full min-h-[320px] items-center justify-center rounded-xl border border-neutral-200 bg-neutral-50 text-sm text-neutral-500">
         中国地图加载中...
       </div>
     );
   }
 
   return (
-    <div className="relative h-full min-h-[320px] w-full overflow-hidden rounded-2xl bg-[radial-gradient(circle_at_50%_42%,rgba(34,211,238,0.12),transparent_62%)]">
+    <div className="relative h-full min-h-[320px] w-full overflow-hidden rounded-xl bg-neutral-50">
       <svg viewBox="0 0 100 100" className="h-full w-full" role="img" aria-label="中国地图真实省份热力图">
         <defs>
-          <filter id="chinaSvgGlow" x="-30%" y="-30%" width="160%" height="160%">
-            <feGaussianBlur stdDeviation="0.75" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
           <radialGradient id="chinaSvgDot" cx="50%" cy="50%" r="50%">
-            <stop stopColor="#67e8f9" stopOpacity="0.95" />
-            <stop offset="1" stopColor="#22d3ee" stopOpacity="0" />
+            <stop stopColor="#111111" stopOpacity="0.32" />
+            <stop offset="1" stopColor="#111111" stopOpacity="0" />
           </radialGradient>
         </defs>
-        <g filter="url(#chinaSvgGlow)">
+        <g>
           {renderData.features.map((feature) => {
             const isHovered = hovered === feature.name;
             return (
               <path
                 key={feature.name}
                 d={feature.path}
-                fill={isHovered ? "rgba(34, 211, 238, 0.68)" : heatColor(feature.value, max)}
-                stroke={isHovered ? "#e0f2fe" : "rgba(103, 232, 249, 0.34)"}
-                strokeWidth={isHovered ? 0.32 : 0.18}
+                fill={isHovered ? "rgba(17, 17, 17, 0.9)" : heatColor(feature.value, max)}
+                stroke="#ffffff"
+                strokeWidth={isHovered ? 0.32 : 0.16}
                 vectorEffect="non-scaling-stroke"
                 onMouseEnter={() => setHovered(feature.name)}
                 onMouseLeave={() => setHovered(null)}
@@ -222,16 +216,16 @@ export default function ChinaSvgMap({ data = [] }: { data?: MapDatum[] }) {
             const radius = Math.max(0.75, Math.min(2.4, 0.7 + (feature.value / max) * 2.4));
             return (
               <g key={`${feature.name}-dot`}>
-                <circle cx={x} cy={y} r={radius * 2.8} fill="url(#chinaSvgDot)" opacity="0.32" />
-                <circle cx={x} cy={y} r={radius} fill="#5eead4" opacity="0.88" />
+                <circle cx={x} cy={y} r={radius * 2.2} fill="url(#chinaSvgDot)" opacity="0.2" />
+                <circle cx={x} cy={y} r={radius * 0.75} fill="#111111" opacity="0.72" />
               </g>
             );
           })}
       </svg>
       {hovered && (
-        <div className="pointer-events-none absolute left-4 top-4 rounded-xl border border-cyan-300/20 bg-black/70 px-3 py-2 text-xs text-cyan-100 backdrop-blur-xl">
-          <span className="title-font font-bold">{hovered}</span>
-          <span className="ml-2 text-white/55">AI 信号 {valueMap.get(hovered) ?? 0}</span>
+        <div className="pointer-events-none absolute left-4 top-4 rounded border border-neutral-800 bg-neutral-950 px-3 py-2 text-xs text-white">
+          <span className="font-medium">{hovered}</span>
+          <span className="ml-2 text-white/70">用户 {valueMap.get(hovered) ?? 0}</span>
         </div>
       )}
     </div>

@@ -16,19 +16,19 @@ export function EmptyState({ icon: Icon, title, description, cta }: EmptyStatePr
       role="status"
     >
       {Icon ? (
-        <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/[0.05] bg-white/[0.015] text-slate-400">
+        <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-gray-200 bg-white text-gray-400">
           <Icon size={22} strokeWidth={1.4} />
         </span>
       ) : null}
       <div className="space-y-1.5">
-        <h3 className="text-base font-semibold text-slate-100 sm:text-lg">{title}</h3>
-        {description ? <p className="max-w-md text-sm text-slate-400">{description}</p> : null}
+        <h3 className="text-base font-semibold text-gray-950 sm:text-lg">{title}</h3>
+        {description ? <p className="max-w-md text-sm text-gray-500">{description}</p> : null}
       </div>
       {cta ? (
         cta.href ? (
           <a
             href={cta.href}
-            className="mt-1 inline-flex items-center gap-2 rounded-full border border-[#22d3ee]/40 bg-[#22d3ee]/[0.08] px-4 py-2 text-sm font-medium text-[#22d3ee] transition hover:border-[#22d3ee]/60 hover:bg-[#22d3ee]/[0.12]"
+            className="mt-1 inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 transition hover:border-blue-300 hover:bg-blue-100"
           >
             {cta.label}
           </a>
@@ -36,7 +36,7 @@ export function EmptyState({ icon: Icon, title, description, cta }: EmptyStatePr
           <button
             type="button"
             onClick={cta.onClick}
-            className="mt-1 inline-flex items-center gap-2 rounded-full border border-[#22d3ee]/40 bg-[#22d3ee]/[0.08] px-4 py-2 text-sm font-medium text-[#22d3ee] transition hover:border-[#22d3ee]/60 hover:bg-[#22d3ee]/[0.12]"
+            className="mt-1 inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 transition hover:border-blue-300 hover:bg-blue-100"
           >
             {cta.label}
           </button>

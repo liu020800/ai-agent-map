@@ -5,9 +5,9 @@ import { Map, Shield, Sparkles } from "lucide-react";
 import LiquidGlassCard from "@/components/react-bits/LiquidGlassCard";
 
 const ITEMS = [
-  { icon: Shield, title: "选择装备", desc: "从 Codex、Claude Code、OpenCode、DeepSeek、豆包里装配你的 AI 阵列。", badge: "Step 01" },
-  { icon: Sparkles, title: "选择场景", desc: "声明你是代码 Agent、自动化术士、研究党还是内容创作者。", badge: "Step 02" },
-  { icon: Map, title: "生成身份", desc: "拿到专属 Passport，点亮全国 AI 玩家图谱，并进入排行榜阵营。", badge: "Step 03" },
+  { icon: Shield, title: "选择工具", desc: "从 Codex、Claude Code、ChatGPT、DeepSeek、豆包里选择你常用的工具。", badge: "Step 01" },
+  { icon: Sparkles, title: "选择用途", desc: "告诉大家你主要用 AI 写代码、做自动化、写内容还是做研究。", badge: "Step 02" },
+  { icon: Map, title: "生成身份卡", desc: "拿到一张可保存、可分享的 AI 身份卡，也能进入工具排行统计。", badge: "Step 03" },
 ];
 
 export default function ThreeStepSection() {
@@ -15,8 +15,8 @@ export default function ThreeStepSection() {
     <section className="relative z-10 px-6 py-16">
       <div className="mx-auto max-w-[1200px]">
         <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mb-10 text-center">
-          <p className="title-font mb-3 text-[10px] font-semibold uppercase tracking-[0.3em] text-[#00ffc8]/60">Three Steps</p>
-          <h2 className="title-font text-2xl font-black tracking-wide text-white sm:text-3xl">30 秒完成你的身份扫描</h2>
+          <p className="title-font mb-3 text-[10px] font-semibold tracking-[0.18em] text-blue-600">三步完成</p>
+          <h2 className="title-font text-2xl font-black tracking-tight text-gray-950 sm:text-3xl">30 秒生成你的 AI 身份卡</h2>
         </motion.div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {ITEMS.map((item, index) => (

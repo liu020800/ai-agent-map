@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import CountUp from "@/components/react-bits/CountUp";
 import { PageShell, Section } from "@/components/ui";
+import { DataNotice } from "@/components/workbench";
 import { toolColor } from "@/data/mock";
 import { fetchLatestCards, fetchRanking, type LatestCard, type RankingData } from "@/lib/api-client";
 
@@ -21,8 +22,7 @@ type LatestPassport = { id: string; nickname: string; city: string; province: st
 
 function StablePanel({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`relative overflow-hidden rounded-2xl border border-cyan-300/14 bg-[linear-gradient(135deg,rgba(15,23,42,0.80),rgba(2,6,23,0.64))] p-5 shadow-[0_0_34px_rgba(34,211,238,0.10)] backdrop-blur-xl sm:p-6 ${className}`}>
-      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:28px_28px] opacity-25" />
+    <div className={`relative overflow-hidden rounded-xl border border-neutral-200 bg-white p-5 sm:p-6 ${className}`}>
       <div className="relative z-10">{children}</div>
     </div>
   );
@@ -94,33 +94,16 @@ const LATEST_PASSPORTS: LatestPassport[] = [
 const TABS = ["tools", "cities", "provinces", "roles", "latest"] as const;
 type TabKey = (typeof TABS)[number];
 
-const MEDAL: Record<number, { label: string; tone: string; glow: string; gradient: string; ring: string; emoji: string }> = {
-  1: { label: "CHAMPION", tone: "#fbbf24", glow: "rgba(251,191,36,0.65)", gradient: "linear-gradient(135deg,rgba(251,191,36,0.18),rgba(251,113,133,0.08))", ring: "border-amber-300/40", emoji: "🥇" },
-  2: { label: "RUNNER-UP", tone: "#cbd5e1", glow: "rgba(203,213,225,0.55)", gradient: "linear-gradient(135deg,rgba(203,213,225,0.16),rgba(148,163,184,0.06))", ring: "border-slate-200/35", emoji: "🥈" },
-  3: { label: "BRONZE", tone: "#fb923c", glow: "rgba(251,146,60,0.55)", gradient: "linear-gradient(135deg,rgba(251,146,60,0.16),rgba(217,119,6,0.06))", ring: "border-orange-300/35", emoji: "🥉" }
-};
-
 function RankBadge({ rank }: { rank: number }) {
-  const medal = MEDAL[rank];
-  if (medal) {
-    return (
-      <div className="relative flex h-10 w-10 items-center justify-center">
-        <div className="absolute inset-0 rounded-full opacity-80 blur-md" style={{ background: medal.glow }} />
-        <div className={"relative flex h-10 w-10 items-center justify-center rounded-full border bg-black/60 " + medal.ring}>
-          <span className="title-font text-base font-black" style={{ color: medal.tone }}>{rank}</span>
-        </div>
-      </div>
-    );
-  }
   return (
-    <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/[0.08] bg-black/30">
-      <span className="title-font text-sm font-bold text-white/60">{rank}</span>
+    <div className="flex h-8 w-8 items-center justify-center">
+      <span className={"font-mono text-sm tabular-nums " + (rank <= 3 ? "font-medium text-neutral-950" : "text-neutral-400")}>#{rank}</span>
     </div>
   );
 }
 
 function RowShell({
-  rank, primary, secondary, badge, value, energy, growth, accent, isTop3
+  rank, primary, secondary, badge, value, energy, growth
 }: {
   rank: number;
   primary: string;
@@ -129,130 +112,99 @@ function RowShell({
   value: number;
   energy: number;
   growth?: number;
-  accent: string;
-  isTop3: boolean;
 }) {
-  const medal = MEDAL[rank];
   return (
     <div
-      className={
-        "group relative grid grid-cols-[44px_minmax(0,1fr)_minmax(0,1fr)_120px] items-center gap-3 overflow-hidden rounded-2xl border p-3.5 transition-all duration-300 hover:-translate-y-0.5 sm:gap-4 sm:p-4 " +
-        (isTop3 ? medal!.ring : "border-white/[0.06] hover:border-white/[0.14]")
-      }
-      style={isTop3 ? { background: medal!.gradient, boxShadow: `0 0 24px -8px ${medal!.glow}` } : { background: "rgba(8,10,16,0.35)" }}
+      className="group relative grid min-h-[52px] grid-cols-[40px_minmax(0,1fr)_minmax(0,0.65fr)_88px] items-center gap-3 rounded-lg border border-neutral-200 bg-white px-3 py-2 transition-colors duration-150 hover:bg-neutral-50 sm:gap-4"
     >
       <RankBadge rank={rank} />
       <div className="min-w-0">
         <div className="flex items-center gap-2">
-          <span className="title-font truncate text-sm font-black text-white sm:text-base">{primary}</span>
-          {badge && <span className="title-font rounded-md border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[9px] uppercase tracking-[0.18em] text-white/65">{badge}</span>}
+          <span className="truncate text-sm font-medium text-neutral-950">{primary}</span>
+          {badge && <span className="rounded border border-neutral-300 bg-transparent px-1.5 py-0.5 text-[11px] text-neutral-500">{badge}</span>}
         </div>
-        <p className="mt-0.5 truncate text-[11px] text-white/50">{secondary}</p>
+        <p className="mt-0.5 truncate text-xs text-neutral-500">{secondary}</p>
       </div>
       <div className="hidden sm:block">
-        <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.05]">
+        <div className="h-[3px] overflow-hidden rounded-full bg-neutral-200">
           <div
-            className="h-full rounded-full"
+            className="h-full rounded-full bg-neutral-950"
             style={{
               width: `${Math.max(8, Math.min(100, energy))}%`,
-              background: `linear-gradient(90deg, ${accent}, ${accent}55)`,
-              boxShadow: `0 0 12px ${accent}55`
             }}
           />
         </div>
-        <div className="mt-1 flex items-center justify-between text-[9px] uppercase tracking-[0.18em] text-white/35">
+        <div className="mt-1 flex items-center justify-between text-[10px] text-neutral-400">
           <span>热度</span>
-          <span style={{ color: accent }}>{Math.round(energy)}%</span>
+          <span>{Math.round(energy)}%</span>
         </div>
       </div>
       <div className="text-right">
-        <div className="title-font text-base font-black text-white sm:text-lg">
+        <div className="text-base font-medium tabular-nums text-neutral-950 sm:text-lg">
           <CountUp to={value} duration={1.2} />
         </div>
-        <div className="mt-0.5 text-[10px] font-bold text-cyan-200">{typeof growth === "number" ? `+${growth}%` : "真实数据"}</div>
+        <div className="mt-0.5 text-[10px] text-neutral-400">{typeof growth === "number" ? `+${growth}%` : "真实数据"}</div>
       </div>
     </div>
   );
 }
 
-function RoleCard({ r, rank, isTop3 }: { r: RoleRank; rank: number; isTop3: boolean }) {
+function RoleCard({ r, rank }: { r: RoleRank; rank: number }) {
   const Icon = r.icon;
-  const medal = MEDAL[rank];
   return (
-    <div
-      className={
-        "group relative overflow-hidden rounded-2xl border p-4 transition-all duration-300 hover:-translate-y-1 " +
-        (isTop3 ? medal!.ring : "border-white/[0.06] hover:border-white/[0.14]")
-      }
-      style={
-        isTop3
-          ? { background: medal!.gradient, boxShadow: `0 0 28px -8px ${medal!.glow}` }
-          : { background: "rgba(8,10,16,0.4)" }
-      }
-    >
+    <div className="group relative overflow-hidden rounded-lg border border-neutral-200 bg-white p-4 transition-colors duration-150 hover:bg-neutral-50">
       <div className="flex items-start gap-3">
         <RankBadge rank={rank} />
-        <div className="flex h-10 w-10 flex-1 items-center justify-center rounded-xl border border-white/[0.08] bg-black/30">
-          <Icon className="h-5 w-5" style={{ color: isTop3 ? medal!.tone : "#22d3ee" }} />
+        <div className="flex h-9 w-9 flex-1 items-center justify-center rounded-lg border border-neutral-200 bg-neutral-50">
+          <Icon className="h-4 w-4 text-neutral-700" />
         </div>
       </div>
-      <p className="mt-3 title-font text-base font-black text-white">{r.role}</p>
-      <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-white/55">{r.description}</p>
+      <p className="mt-3 text-base font-medium text-neutral-950">{r.role}</p>
+      <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-neutral-500">{r.description}</p>
       <div className="mt-3 flex items-end justify-between">
         <div>
-          <p className="title-font text-2xl font-black text-white">
+          <p className="text-2xl font-medium tabular-nums text-neutral-950">
             <CountUp to={r.users} duration={1.3} />
           </p>
-          <p className="text-[10px] text-white/40">占比 {r.share}% · 主力 {r.topTool}</p>
+          <p className="text-[10px] text-neutral-500">占比 {r.share}% · 常用 {r.topTool}</p>
         </div>
-        <span className="rounded-md border border-cyan-400/20 bg-cyan-400/10 px-1.5 py-0.5 text-[10px] font-bold text-cyan-200">真实数据</span>
+        <span className="rounded border border-neutral-300 bg-white px-1.5 py-0.5 text-[10px] text-neutral-500">真实数据</span>
       </div>
-      <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/[0.05]">
-        <div className="h-full rounded-full bg-[linear-gradient(90deg,#22d3ee,#a855f7,#fb7185)]" style={{ width: `${Math.min(100, r.share * 3)}%` }} />
+      <div className="mt-2 h-[3px] overflow-hidden rounded-full bg-neutral-200">
+        <div className="h-full rounded-full bg-neutral-950" style={{ width: `${Math.min(100, r.share * 3)}%` }} />
       </div>
     </div>
   );
 }
 
 function PassportMiniCard({ p, rank }: { p: LatestPassport; rank: number }) {
-  const medal = MEDAL[rank];
-  const isTop3 = rank <= 3;
-  const accent = isTop3 ? medal!.tone : "#22d3ee";
-  const ring = isTop3 ? medal!.ring : "border-white/[0.06]";
   return (
-    <div
-      className={"group relative overflow-hidden rounded-2xl border p-4 transition-all duration-300 hover:-translate-y-1 " + ring}
-      style={
-        isTop3
-          ? { background: medal!.gradient, boxShadow: `0 0 24px -10px ${medal!.glow}` }
-          : { background: "rgba(8,10,16,0.4)" }
-      }
-    >
+    <div className="group relative overflow-hidden rounded-lg border border-neutral-200 bg-white p-4 transition-colors duration-150 hover:bg-neutral-50">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
           <RankBadge rank={rank} />
-          <div className="rounded-md border px-1.5 py-0.5 font-mono text-[9px]" style={{ color: accent, borderColor: `${accent}40`, background: `${accent}10` }}>{p.id}</div>
+        <div className="rounded border border-neutral-300 px-1.5 py-0.5 font-mono text-[9px] text-neutral-500">{p.id}</div>
         </div>
-        <div className="rounded-md border border-cyan-300/30 bg-cyan-300/10 px-1.5 py-0.5 text-[10px] font-bold text-cyan-300">Lv.{String(p.level).padStart(2, "0")}</div>
+        <div className="rounded border border-neutral-300 bg-neutral-50 px-1.5 py-0.5 text-[10px] text-neutral-600">Lv.{String(p.level).padStart(2, "0")}</div>
       </div>
       <div className="mt-3 flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl border-2" style={{ borderColor: accent, boxShadow: `0 0 12px -2px ${accent}80` }}>
-          <span className="title-font text-base font-black" style={{ color: accent }}>{p.nickname.slice(0, 1).toUpperCase()}</span>
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-neutral-300 bg-neutral-50">
+          <span className="text-sm font-medium text-neutral-950">{p.nickname.slice(0, 1).toUpperCase()}</span>
         </div>
         <div className="min-w-0 flex-1">
-          <p className="title-font truncate text-sm font-black text-white">{p.nickname}</p>
-          <p className="truncate text-[11px] text-white/55">{p.role} · {p.city}</p>
+          <p className="truncate text-sm font-medium text-neutral-950">{p.nickname}</p>
+          <p className="truncate text-[11px] text-neutral-500">{p.role} · {p.city}</p>
         </div>
       </div>
       <div className="mt-3 flex flex-wrap gap-1">
         {p.tools.slice(0, 3).map((t) => (
-          <span key={t} className="title-font rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[9px] text-white/75">{t}</span>
+          <span key={t} className="rounded border border-neutral-300 bg-white px-2 py-0.5 text-[10px] text-neutral-600">{t}</span>
         ))}
       </div>
-      <div className="mt-3 flex items-center justify-between text-[10px] text-white/40">
+      <div className="mt-3 flex items-center justify-between text-[10px] text-neutral-500">
         <span className="flex items-center gap-1">
-          <Radio className="h-3 w-3 text-cyan-300" />
-          信号 <span className="title-font font-bold text-white">{p.signalStrength}%</span>
+          <Radio className="h-3 w-3 text-neutral-500" />
+          活跃度 <span className="font-medium text-neutral-950">{p.signalStrength}%</span>
         </span>
         <span>{p.createdAt}</span>
       </div>
@@ -353,8 +305,8 @@ function toLatestPassports(cards: LatestCard[]): LatestPassport[] {
 
 function EmptyRealData({ label }: { label: string }) {
   return (
-    <div className="rounded-2xl border border-cyan-300/12 bg-cyan-300/[0.04] p-6 text-center text-sm text-cyan-100/75">
-      暂无真实{label}数据，生成第一张身份卡后这里会自动点亮。
+    <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-6 text-center text-sm text-neutral-500">
+      暂无真实{label}数据，生成第一张身份卡后这里会自动更新。
     </div>
   );
 }
@@ -364,65 +316,41 @@ function ChampionDashboard({ tools, cities, latest, roles }: { tools: ToolRank[]
   const city = cities[0] ?? { city: "待点亮", province: "", users: 0, topRole: "AI 探索者", topTool: "未记录", growthRate: 0 };
   const highest = latest.reduce((a, b) => (a.level > b.level ? a : b), latest[0] ?? { nickname: "待点亮", level: 0 });
   const fastest = roles[0] ?? { role: "待点亮", users: 0, share: 0, topTool: "未记录", growthRate: 0, description: "", icon: Brain };
-  const energy = tool.heat;
   return (
-    <div className="relative overflow-hidden rounded-[28px] border border-amber-300/20 bg-[linear-gradient(135deg,rgba(251,191,36,0.10),rgba(168,85,247,0.06))] p-6 shadow-[0_0_72px_rgba(251,191,36,0.18)] backdrop-blur-2xl sm:p-7">
-      <div aria-hidden className="absolute inset-0 bg-[linear-gradient(rgba(251,191,36,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(251,191,36,0.04)_1px,transparent_1px)] bg-[size:28px_28px] opacity-40" />
-      <div aria-hidden className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-amber-300/30 blur-[100px]" />
-      <div className="relative">
-        <div className="mb-4 flex items-center justify-between">
+    <div className="relative overflow-hidden rounded-xl border border-neutral-200 bg-white p-5 sm:p-6">
+      <div className="relative border-l-4 border-neutral-950 pl-4">
+        <div className="mb-5 flex items-center justify-between">
           <div>
-            <p className="title-font text-[10px] uppercase tracking-[0.3em] text-amber-300/80">Champion Dashboard</p>
-            <h2 className="title-font mt-2 text-2xl font-black text-white sm:text-3xl">冠军仪表盘</h2>
+            <p className="text-xs text-neutral-500">当前热门</p>
+            <h2 className="mt-1 text-xl font-medium text-neutral-950">工具使用摘要</h2>
           </div>
-          <Crown className="h-9 w-9 text-amber-300 drop-shadow-[0_0_14px_rgba(251,191,36,0.7)]" />
+          <Crown className="h-5 w-5 text-neutral-500" />
         </div>
 
-        <div className="mb-5 flex items-center gap-4">
-          <div className="relative flex h-24 w-24 items-center justify-center">
-            <svg className="absolute inset-0 -rotate-90" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="6" />
-              <circle
-                cx="50" cy="50" r="44" fill="none"
-                stroke="url(#champion-ring)" strokeWidth="6" strokeLinecap="round"
-                strokeDasharray={`${(energy / 100) * 276} 276`}
-                style={{ filter: "drop-shadow(0 0 8px rgba(251,191,36,0.6))" }}
-              />
-              <defs>
-                <linearGradient id="champion-ring" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stopColor="#fbbf24" />
-                  <stop offset="60%" stopColor="#a855f7" />
-                  <stop offset="100%" stopColor="#22d3ee" />
-                </linearGradient>
-              </defs>
-            </svg>
-            <div className="flex flex-col items-center">
-              <span className="title-font text-3xl font-black text-white">{tool.heat}</span>
-              <span className="text-[9px] uppercase tracking-[0.2em] text-amber-300/80">HEAT</span>
-            </div>
-          </div>
-          <div className="flex-1">
-            <p className="text-[10px] uppercase tracking-[0.22em] text-white/45">Current Champion Tool</p>
-            <p className="title-font mt-1 text-3xl font-black text-white drop-shadow-[0_0_18px_rgba(34,211,238,0.4)]" style={{ color: toolColor(tool.name) }}>{tool.name}</p>
-            <p className="mt-1 text-[11px] text-white/55">{tool.users} 次装配 · 真实用户提交 · 类别 {tool.category}</p>
+        <div className="mb-5">
+          <p className="text-xs text-neutral-500">最常用工具</p>
+          <p className="mt-1 text-3xl font-medium tracking-tight text-neutral-950">{tool.name}</p>
+          <p className="mt-1 text-xs text-neutral-500">{tool.users} 人使用 · 类别 {tool.category}</p>
+          <div className="mt-3 h-[3px] overflow-hidden rounded-full bg-neutral-200">
+            <div className="h-full rounded-full bg-neutral-950" style={{ width: `${Math.max(8, tool.heat)}%` }} />
           </div>
         </div>
 
         <div className="grid grid-cols-3 gap-2">
           {[
-            { label: "冠军城市", value: city.city, sub: `${city.users} 信号`, icon: MapPin, tone: "#22d3ee" },
+            { label: "热门城市", value: city.city, sub: `${city.users} 用户`, icon: MapPin, tone: "#22d3ee" },
             { label: "最高等级", value: `Lv.${String(highest.level).padStart(2, "0")}`, sub: highest.nickname, icon: Trophy, tone: "#fbbf24" },
             { label: "热门角色", value: fastest.role, sub: `${fastest.users} 人`, icon: TrendingUp, tone: "#10b981" }
           ].map((it) => {
             const Icon = it.icon;
             return (
               <div key={it.label} className="rounded-xl border border-white/[0.08] bg-black/30 p-3">
-                <div className="flex items-center gap-1.5 text-[9px] uppercase tracking-[0.2em] text-white/40">
-                  <Icon className="h-3 w-3" style={{ color: it.tone }} />
+                <div className="flex items-center gap-1.5 text-[10px] text-neutral-500">
+                  <Icon className="h-3 w-3 text-neutral-500" />
                   {it.label}
                 </div>
-                <p className="title-font mt-1.5 truncate text-base font-black text-white">{it.value}</p>
-                <p className="mt-0.5 truncate text-[10px] text-white/45">{it.sub}</p>
+                <p className="mt-1.5 truncate text-sm font-medium text-neutral-950">{it.value}</p>
+                <p className="mt-0.5 truncate text-[10px] text-neutral-500">{it.sub}</p>
               </div>
             );
           })}
@@ -486,27 +414,23 @@ export default function RankingPage() {
 
   return (
     <main className="relative min-h-screen overflow-hidden pb-16 pt-0">
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute left-[8%] top-[10%] h-[28rem] w-[28rem] rounded-full bg-[rgba(168,85,247,0.20)] blur-[140px]" />
-        <div className="absolute right-[6%] top-[16%] h-[26rem] w-[26rem] rounded-full bg-[rgba(251,191,36,0.18)] blur-[130px]" />
-        <div className="absolute bottom-0 left-1/2 h-[32rem] w-[32rem] -translate-x-1/2 rounded-full bg-[rgba(0,229,255,0.15)] blur-[140px]" />
-      </div>
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 bg-[#fafafa]" />
 
       <Section className="relative z-10" spacing="sm">
         <PageShell width="wide">
           {/* HERO */}
-          <section className="grid gap-8 pb-10 pt-6 lg:min-h-[540px] lg:grid-cols-[1fr_500px] lg:items-center">
+          <section className="grid gap-8 pb-10 pt-6 lg:grid-cols-[1fr_500px] lg:items-center">
             <motion.div initial={false} className="flex flex-col justify-center space-y-6">
-              <div className="inline-flex items-center gap-2.5 rounded-full border border-cyan-300/20 bg-cyan-300/[0.05] px-4 py-2 backdrop-blur-xl">
-                <Trophy className="h-4 w-4 text-cyan-300" />
-                <span className="title-font text-[11px] font-bold tracking-[0.32em] text-cyan-300">NATIONAL LEADERBOARD</span>
-                <span className="flex h-1.5 w-1.5 rounded-full bg-cyan-300 shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
+              <div className="inline-flex items-center gap-2.5 rounded-full border border-blue-100 bg-blue-50 px-4 py-2">
+                <Trophy className="h-4 w-4 text-blue-600" />
+                <span className="title-font text-[11px] font-bold tracking-[0.18em] text-blue-600">工具排行</span>
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
               </div>
-              <h1 className="title-font text-5xl font-black leading-[0.98] tracking-[-0.04em] text-white drop-shadow-[0_0_36px_rgba(34,211,238,0.30)] sm:text-6xl lg:text-7xl">
-                全国 <span className="gradient-text-rb">AI 排行榜</span>
+              <h1 className="title-font text-5xl font-black leading-[0.98] tracking-[-0.04em] text-gray-950 sm:text-6xl lg:text-7xl">
+                AI <span className="text-blue-700">工具排行榜</span>
               </h1>
-              <p className="max-w-[560px] text-base font-medium text-white/72 sm:text-lg">
-                谁在领跑 Agent 装备生态，哪里的玩家最密集，哪些角色正在崛起。
+              <p className="max-w-[560px] text-base font-medium text-gray-600 sm:text-lg">
+                基于用户登记数据统计热门工具，也可以看看哪些城市和使用场景更活跃。
               </p>
               <div className="flex flex-wrap gap-3 pt-2">
                 <Link href="/survey" className="btn-rb-fill">
@@ -516,14 +440,17 @@ export default function RankingPage() {
                 </Link>
                 <Link href="/map" className="btn-rb-ghost">
                   <Radio className="h-4 w-4" />
-                  <span>查看全国雷达</span>
+                  <span>查看玩家地图</span>
                 </Link>
               </div>
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-3 text-[11px] text-white/45">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-3 text-[11px] text-gray-500">
                 <span className="flex items-center gap-1.5"><Crown className="h-3 w-3 text-amber-300" /> 实时更新</span>
                 <span className="flex items-center gap-1.5"><Hash className="h-3 w-3 text-cyan-300" /> {overview.total} 名玩家入榜</span>
                 <span className="flex items-center gap-1.5"><Brain className="h-3 w-3 text-violet-300" /> 5 大分区实时切换</span>
               </div>
+              <DataNotice>
+                排行榜基于真实身份卡提交记录计算；当前为早期数据收集阶段，榜单会随新提交自动刷新。
+              </DataNotice>
             </motion.div>
             <motion.div initial={false}>
               <ChampionDashboard tools={toolRanking} cities={cityRanking} latest={latestPassports} roles={roleRanking} />
@@ -531,19 +458,12 @@ export default function RankingPage() {
           </section>
 
           {/* TOP STATS 6 cards */}
-          <section className="mb-10 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+          <section className="mb-8 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-neutral-200 bg-neutral-200 md:grid-cols-3 lg:grid-cols-6">
             {stats.map((s) => {
-              const Icon = s.icon;
               return (
-                <div key={s.label} className="group relative overflow-hidden rounded-2xl border border-white/[0.06] bg-[linear-gradient(135deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01))] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-white/[0.14]">
-                  <div aria-hidden className="absolute -right-8 -top-8 h-24 w-24 rounded-full opacity-30 blur-2xl transition-opacity duration-500 group-hover:opacity-60" style={{ background: s.tone }} />
-                  <div className="relative flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] bg-black/30">
-                      <Icon className="h-4 w-4" style={{ color: s.tone }} />
-                    </div>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">{s.label}</p>
-                  </div>
-                  <div className="relative mt-3 title-font text-2xl font-black text-white sm:text-3xl">
+                <div key={s.label} className="bg-white p-4">
+                  <p className="text-xs text-neutral-500">{s.label}</p>
+                  <div className="mt-2 text-xl font-medium tabular-nums text-neutral-950 sm:text-2xl">
                     {s.isText ? s.value : <CountUp to={s.value as number} duration={1.4} />}
                   </div>
                 </div>
@@ -556,12 +476,11 @@ export default function RankingPage() {
             <StablePanel>
               <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <p className="title-font text-[10px] uppercase tracking-[0.28em] text-cyan-300/70">Leaderboard Panels</p>
-                  <h3 className="title-font mt-2 text-2xl font-black text-white sm:text-3xl">排行榜分区</h3>
+                  <p className="title-font text-[10px] tracking-[0.18em] text-blue-600">榜单分区</p>
+                  <h3 className="title-font mt-2 text-2xl font-black text-gray-950 sm:text-3xl">排行榜分区</h3>
                 </div>
-                <div className="flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-black/30 px-3 py-1.5 text-[10px] text-white/55">
-                  <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-                  实时数据 · 每分钟刷新
+                <div className="flex items-center gap-1.5 rounded border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-xs text-neutral-500">
+                  数据会随新身份卡自动更新
                 </div>
               </div>
 
@@ -575,16 +494,15 @@ export default function RankingPage() {
                       key={k}
                       onClick={() => setTab(k)}
                       className={
-                        "inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold transition-all duration-300 " +
+                        "inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors duration-150 " +
                         (active
-                          ? "border-white/[0.2] text-white shadow-[0_0_24px_-6px_rgba(34,211,238,0.6)]"
-                          : "border-white/[0.08] bg-white/[0.02] text-white/60 hover:text-white")
+                          ? "border-neutral-950 bg-neutral-950 text-white"
+                          : "border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50 hover:text-neutral-950")
                       }
-                      style={active ? { background: `linear-gradient(135deg, ${meta.accent}30, ${meta.accent}10)`, color: meta.accent } : {}}
                     >
                       <Icon className="h-4 w-4" />
                       {meta.label}
-                      <span className="title-font rounded-full border border-white/15 bg-black/40 px-1.5 py-0.5 text-[10px] text-white/65">{meta.total}</span>
+                      <span className={"rounded border px-1.5 py-0.5 text-[10px] " + (active ? "border-white/20 text-white/80" : "border-neutral-200 text-neutral-500")}>{meta.total}</span>
                     </button>
                   );
                 })}
@@ -602,8 +520,6 @@ export default function RankingPage() {
                       badge={t.category}
                       value={t.users}
                       energy={t.heat}
-                      accent={toolColor(t.name)}
-                      isTop3={i < 3}
                     />
                   ))}
                 </div>
@@ -620,8 +536,6 @@ export default function RankingPage() {
                       secondary={`${c.province} · 主流角色 ${c.topRole} · 主流工具 ${c.topTool}`}
                       value={c.users}
                       energy={Math.min(100, c.users / 2)}
-                      accent="#22d3ee"
-                      isTop3={i < 3}
                     />
                   ))}
                 </div>
@@ -638,8 +552,6 @@ export default function RankingPage() {
                       secondary={`${p.cityCount} 城市覆盖 · 最热工具 ${p.topTool}`}
                       value={p.users}
                       energy={Math.min(100, p.users / 3.2)}
-                      accent="#fbbf24"
-                      isTop3={i < 3}
                     />
                   ))}
                 </div>
@@ -649,7 +561,7 @@ export default function RankingPage() {
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                   {roleRanking.length === 0 && <EmptyRealData label="角色榜" />}
                   {roleRanking.map((r, i) => (
-                    <RoleCard key={r.id} r={r} rank={i + 1} isTop3={i < 3} />
+                    <RoleCard key={r.id} r={r} rank={i + 1} />
                   ))}
                 </div>
               )}
@@ -667,17 +579,15 @@ export default function RankingPage() {
 
           {/* BOTTOM CTA */}
           <section className="mt-8">
-            <div className="relative overflow-hidden rounded-[28px] border border-cyan-300/20 bg-[linear-gradient(135deg,rgba(34,211,238,0.08),rgba(168,85,247,0.06))] p-8 text-center shadow-[0_0_80px_rgba(34,211,238,0.18)] backdrop-blur-2xl sm:p-12">
-              <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(34,211,238,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(34,211,238,0.04)_1px,transparent_1px)] bg-[size:32px_32px] opacity-50" />
-              <div aria-hidden className="pointer-events-none absolute -top-10 left-1/2 h-40 w-40 -translate-x-1/2 rounded-full bg-cyan-300/30 blur-[100px]" />
+            <div className="relative overflow-hidden rounded-xl border border-neutral-200 bg-neutral-50 p-8 text-center sm:p-10">
               <div className="relative">
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-cyan-300/30 bg-cyan-300/[0.08] px-4 py-1.5">
-                  <Award className="h-3.5 w-3.5 text-cyan-300" />
-                  <span className="title-font text-[10px] font-bold tracking-[0.28em] text-cyan-300">JOIN THE BOARD</span>
+                <div className="mb-4 inline-flex items-center gap-2 rounded border border-neutral-200 bg-white px-3 py-1.5">
+                  <Award className="h-3.5 w-3.5 text-neutral-500" />
+                  <span className="text-xs font-medium text-neutral-500">加入排行</span>
                 </div>
-                <h2 className="title-font text-3xl font-black text-white sm:text-4xl">想进入排行榜？</h2>
-                <p className="mx-auto mt-3 max-w-[560px] text-base text-white/65">
-                  生成你的 AI Agent Passport，让你的装备、城市和角色进入全国信号榜。
+                <h2 className="text-2xl font-medium text-neutral-950 sm:text-3xl">想进入排行榜？</h2>
+                <p className="mx-auto mt-3 max-w-[560px] text-sm leading-6 text-neutral-600">
+                  生成你的 AI 身份卡，让你的工具、城市和使用场景进入排行榜统计。
                 </p>
                 <div className="mt-7 flex flex-wrap justify-center gap-3">
                   <Link href="/survey" className="btn-rb-fill">
@@ -686,7 +596,7 @@ export default function RankingPage() {
                   </Link>
                   <Link href="/map" className="btn-rb-ghost">
                     <Radio className="h-4 w-4" />
-                    <span>查看全国雷达</span>
+                    <span>查看玩家地图</span>
                   </Link>
                 </div>
               </div>

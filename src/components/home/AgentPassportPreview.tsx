@@ -15,9 +15,7 @@ export default function AgentPassportPreview() {
       className="relative"
       style={{ perspective: "1200px" }}
     >
-      <div className="absolute inset-0 scale-[1.08] rounded-[30px] bg-[radial-gradient(circle_at_20%_10%,rgba(0,255,200,0.24),transparent_28%),radial-gradient(circle_at_85%_15%,rgba(168,85,247,0.24),transparent_30%),radial-gradient(circle_at_50%_100%,rgba(0,212,255,0.18),transparent_36%)] blur-[48px]" />
-
-      <div className="relative overflow-hidden rounded-[28px] border border-white/12 bg-[#08090e]/90 shadow-[0_25px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl">
+      <div className="relative overflow-hidden rounded-[24px] border border-neutral-800 bg-[#08090e]/90">
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.015))]" />
         <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(0,255,200,0.14),transparent_32%),radial-gradient(circle_at_0%_100%,rgba(168,85,247,0.16),transparent_28%)]" />
@@ -31,12 +29,12 @@ export default function AgentPassportPreview() {
           <div className="mb-4 flex items-start justify-between gap-3">
             <div>
               <div className="mb-2 flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-gradient-to-br from-[#00ffc8] to-[#8b5cf6] shadow-[0_0_24px_rgba(0,255,200,0.28)]">
+                <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-neutral-800">
                   <Shield className="h-3.5 w-3.5 text-white" />
                 </div>
-                <span className="text-[10px] font-black tracking-[0.24em] text-[#00ffc8]/85">AI AGENT PASSPORT</span>
+                <span className="text-[10px] font-black tracking-[0.18em] text-[#00ffc8]/85">AI 身份卡预览</span>
               </div>
-              <p className="text-[10px] uppercase tracking-[0.22em] text-white/28">Identity verified · live signal online</p>
+              <p className="text-[10px] tracking-[0.12em] text-white/35">记录工具栈 · 可下载分享</p>
             </div>
             <div className="rounded-full border border-amber-400/25 bg-amber-400/10 px-2.5 py-1 text-[10px] font-black text-amber-300">
               SSR
@@ -57,7 +55,7 @@ export default function AgentPassportPreview() {
                   <rect x="3" y="5" width="2" height="0.5" fill="#05060a" rx="0.2" />
                 </svg>
               </div>
-              <div className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[#08090e] bg-gradient-to-br from-amber-400 to-orange-500 shadow-[0_0_18px_rgba(251,191,36,0.45)]">
+              <div className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[#08090e] bg-neutral-700">
                 <span className="text-[9px] font-black text-white">4</span>
               </div>
             </div>
@@ -71,7 +69,7 @@ export default function AgentPassportPreview() {
               </div>
               <div className="mt-3 flex items-center gap-2 text-[10px] text-white/38">
                 <Radio className="h-3 w-3 text-[#00ffc8]/70" />
-                <span>全国信号链路已接入</span>
+                <span>已加入全国玩家地图</span>
               </div>
             </div>
           </div>
@@ -90,7 +88,7 @@ export default function AgentPassportPreview() {
           <div className="mt-4 rounded-2xl border border-white/[0.04] bg-white/[0.015] p-3.5">
             <p className="mb-2 flex items-center gap-1.5 text-[9px] uppercase tracking-[0.22em] text-white/32">
               <Swords className="h-3 w-3 text-[#00ffc8]/70" />
-              主力装备
+              常用工具
             </p>
             <div className="flex flex-wrap gap-1.5">
               {LOADOUT.map((tool) => (

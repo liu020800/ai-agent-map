@@ -74,7 +74,8 @@ export function toCardRecord(row, origin = "https://liusq.icu") {
   const nickname = row.nickname || "匿名 Agent";
   const province = row.province || "";
   const city = row.city || "";
-  const imageUrl = row.avatar_seed || "";
+  const storedImageUrl = row.avatar_seed || "";
+  const imageUrl = cardId ? `${origin}/api/cards/${encodeURIComponent(cardId)}/image` : storedImageUrl;
   const shareUrl = `${origin}/card/${encodeURIComponent(cardId)}`;
   const shareTitle = `${nickname} 的 AI Agent 身份卡`;
   const shareDescription = `我已点亮 AI Agent Map，正在使用 ${tools.join(" / ") || "AI 工具"}。`;
@@ -101,6 +102,74 @@ export function toCardRecord(row, origin = "https://liusq.icu") {
 
 export function isFallbackImageUrl(imageUrl) {
   return typeof imageUrl === "string" && imageUrl.includes("/api/cards/") && imageUrl.endsWith("/image.svg");
+}
+
+export function isPersistentImageUrl(imageUrl) {
+  return typeof imageUrl === "string" && imageUrl.includes("/api/cards/") && imageUrl.endsWith("/image");
+}
+
+export function getImageStore(context) {
+  const bucket = context.env.AGENT_CARD_IMAGES;
+  if (!bucket || typeof bucket.put !== "function" || typeof bucket.get !== "function") return null;
+  return bucket;
+}
+
+export function persistentCardImageUrl(origin, cardId) {
+  return `/api/cards/${encodeURIComponent(cardId)}/image`;
+}
+
+export function cardImageObjectKey(cardId) {
+  return `cards/${encodeURIComponent(cardId)}.png`;
+}
+
+export async function persistGeneratedImage(context, imageValue, cardId, origin) {
+  const bucket = getImageStore(context);
+  if (!bucket) throw new Error("AGENT_CARD_IMAGES R2 binding not configured");
+
+  const { bytes, contentType } = await generatedImageToBytes(imageValue);
+  await bucket.put(cardImageObjectKey(cardId), bytes, {
+    httpMetadata: {
+      contentType,
+      cacheControl: "public, max-age=31536000, immutable",
+    },
+    customMetadata: {
+      cardId,
+      source: "sensenova-u1-fast",
+      createdAt: new Date().toISOString(),
+    },
+  });
+  return persistentCardImageUrl(origin, cardId);
+}
+
+export async function generatedImageToBytes(imageValue) {
+  if (typeof imageValue !== "string" || !imageValue.trim()) {
+    throw new Error("Empty generated image");
+  }
+
+  if (/^https?:\/\//i.test(imageValue)) {
+    const res = await fetch(imageValue);
+    if (!res.ok) throw new Error(`Generated image download failed: ${res.status}`);
+    const contentType = res.headers.get("content-type") || "image/png";
+    return { bytes: await res.arrayBuffer(), contentType };
+  }
+
+  const dataUrlMatch = imageValue.match(/^data:([^;,]+)?(;base64)?,(.*)$/);
+  if (dataUrlMatch) {
+    const contentType = dataUrlMatch[1] || "image/png";
+    const body = dataUrlMatch[3] || "";
+    if (dataUrlMatch[2]) return { bytes: base64ToArrayBuffer(body), contentType };
+    return { bytes: new TextEncoder().encode(decodeURIComponent(body)).buffer, contentType };
+  }
+
+  return { bytes: base64ToArrayBuffer(imageValue), contentType: "image/png" };
+}
+
+function base64ToArrayBuffer(value) {
+  const normalized = value.replace(/\s+/g, "");
+  const binary = atob(normalized);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index);
+  return bytes.buffer;
 }
 
 export async function fetchRows(env, query) {

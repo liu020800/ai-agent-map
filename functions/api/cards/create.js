@@ -7,9 +7,10 @@ import {
   getSupabaseEnv,
   hashText,
   insertRow,
-  isFallbackImageUrl,
+  isPersistentImageUrl,
   jsonResponse,
   normalizeInput,
+  persistGeneratedImage,
   toCardRecord,
   updateRow,
   validateCreateInput,
@@ -31,7 +32,7 @@ export async function onRequestPost(context) {
     );
     if (existing.ok && existing.rows.length > 0) {
       const existingRow = existing.rows[0];
-      if (!isFallbackImageUrl(existingRow.avatar_seed)) {
+      if (isPersistentImageUrl(existingRow.avatar_seed)) {
         return jsonResponse({ success: true, card: toCardRecord(existingRow, origin), reused: true }, 200);
       }
 
@@ -39,7 +40,8 @@ export async function onRequestPost(context) {
       if (!apiKey) return jsonResponse({ success: false, error: "SENSENOVA_API_KEY not configured" }, 500);
 
       try {
-        const replacementUrl = await generateWithSenseNova(apiKey, buildIdentityCardPrompt(input, existingRow.card_slug));
+        const generatedImage = await generateWithSenseNova(apiKey, buildIdentityCardPrompt(input, existingRow.card_slug));
+        const replacementUrl = await persistGeneratedImage(context, generatedImage, existingRow.card_slug, origin);
         const updated = await updateRow(env, existingRow.card_slug, {
           avatar_seed: replacementUrl,
           updated_at: new Date().toISOString(),
@@ -58,9 +60,10 @@ export async function onRequestPost(context) {
     const prompt = buildIdentityCardPrompt(input, cardId);
     let imageUrl = "";
     try {
-      imageUrl = await generateWithSenseNova(apiKey, prompt);
+      const generatedImage = await generateWithSenseNova(apiKey, prompt);
+      imageUrl = await persistGeneratedImage(context, generatedImage, cardId, origin);
     } catch {
-      return jsonResponse({ success: false, error: "AI 身份卡图片生成失败，请稍后重试" }, 502);
+      return jsonResponse({ success: false, error: "AI 身份卡图片生成或持久化失败，请稍后重试" }, 502);
     }
     const payload = {
       nickname: input.nickname,

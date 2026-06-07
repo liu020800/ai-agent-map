@@ -137,13 +137,45 @@ NEXT_PUBLIC_SITE_URL
 
 `SUPABASE_SERVICE_ROLE_KEY` and `SENSENOVA_API_KEY` must be configured as secrets. They must not be exposed in client code.
 
+Required Cloudflare Pages R2 binding:
+
+```txt
+Variable name: AGENT_CARD_IMAGES
+Bucket: your identity-card image bucket
+```
+
+Create the bucket once if it does not exist:
+
+```bash
+npx wrangler r2 bucket create ai-agent-card-images
+```
+
+Then bind it in Cloudflare Dashboard:
+
+```txt
+Pages -> ai-agent-map -> Settings -> Functions -> R2 bucket bindings
+```
+
+Use:
+
+```txt
+Variable name: AGENT_CARD_IMAGES
+R2 bucket: ai-agent-card-images
+```
+
+The bucket does not need to be public. The site serves stored card images through:
+
+```txt
+/api/cards/:cardId/image
+```
+
 ## Agent Card Persistence
 
 Identity cards use the existing Supabase `users` table as the first production persistence layer:
 
 - `card_slug` stores the public `cardId`.
 - `visitor_hash` stores a hashed browser visitor ID.
-- `avatar_seed` stores the generated card image URL.
+- `avatar_seed` stores the site-owned persistent image URL, for example `/api/cards/AGT-CN-123456/image`.
 - `usage_frequency` stores the user signature.
 - `usage_purpose` stores selected scenarios.
 
@@ -164,6 +196,14 @@ GET /card/:cardId
 ```
 
 Future migration can move card records from `users` to a dedicated `agent_cards` table or object storage. Keep the API response shape stable when migrating.
+
+Generated card images are persisted in Cloudflare R2:
+
+- New card creation uploads the SenseNova result to R2 before writing the Supabase row.
+- Regeneration uploads the new image to R2 before updating the Supabase row.
+- Read-only share pages display `/api/cards/:cardId/image`, not the temporary model URL.
+- Existing legacy rows with temporary model URLs are lazily migrated: the first image request attempts to fetch the old URL, upload it to R2, and update `avatar_seed`.
+- If a legacy temporary URL has already expired, the image endpoint returns a lightweight fallback SVG and the user can regenerate the card.
 
 ## Future Git Auto Deployment
 

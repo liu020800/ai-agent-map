@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import CountUp from "@/components/react-bits/CountUp";
 import { PageShell, Section } from "@/components/ui";
+import { DataNotice } from "@/components/workbench";
 import ChinaSvgMap from "@/components/ChinaSvgMap";
 import { toolColor } from "@/data/mock";
 import { SURVEY_PROVINCES } from "@/lib/survey-service";
@@ -50,22 +51,13 @@ type CampSignal = {
 function StableGlassCard({
   children,
   className = "",
-  tone = "cyan",
 }: {
   children: React.ReactNode;
   className?: string;
   tone?: "cyan" | "emerald" | "amber" | "violet";
 }) {
-  const toneClass = {
-    cyan: "border-cyan-300/16 shadow-[0_0_34px_rgba(34,211,238,0.10)]",
-    emerald: "border-emerald-300/16 shadow-[0_0_34px_rgba(16,185,129,0.10)]",
-    amber: "border-amber-300/16 shadow-[0_0_34px_rgba(251,191,36,0.10)]",
-    violet: "border-violet-300/16 shadow-[0_0_34px_rgba(168,85,247,0.10)]",
-  }[tone];
-
   return (
-    <div className={`relative overflow-hidden rounded-2xl border bg-[linear-gradient(135deg,rgba(15,23,42,0.78),rgba(2,6,23,0.62))] p-5 backdrop-blur-xl ${toneClass} ${className}`}>
-      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:28px_28px] opacity-30" />
+    <div className={`relative overflow-hidden rounded-xl border border-neutral-200 bg-white p-5 ${className}`}>
       <div className="relative z-10">{children}</div>
     </div>
   );
@@ -170,7 +162,7 @@ function StatCard({
   suffix?: string;
 }) {
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-white/[0.06] bg-[linear-gradient(135deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01))] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-white/[0.14]">
+    <div className="group relative overflow-hidden rounded-xl border border-neutral-200 bg-white p-4 transition-colors duration-150 hover:bg-neutral-50">
       <div aria-hidden className="absolute -right-8 -top-8 h-24 w-24 rounded-full opacity-30 blur-2xl transition-opacity duration-500 group-hover:opacity-60" style={{ background: tone }} />
       <div className="relative flex items-center gap-3">
         <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] bg-black/30">
@@ -257,11 +249,11 @@ function ProvinceRadar({ provinces, totalSignals }: { provinces: ProvinceSignal[
       })}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
         <div className="rounded-full border border-cyan-300/30 bg-black/60 px-6 py-3 backdrop-blur-xl">
-          <p className="title-font text-[9px] uppercase tracking-[0.32em] text-cyan-300/70">Total Signal</p>
+          <p className="title-font text-[9px] tracking-[0.18em] text-blue-600">总用户数</p>
           <p className="title-font text-3xl font-black text-white">
             <CountUp to={totalSignals} duration={1.6} />
           </p>
-          <p className="text-[9px] text-white/45">全国总信号</p>
+          <p className="text-[9px] text-gray-500">全国总用户</p>
         </div>
       </div>
     </div>
@@ -380,20 +372,18 @@ export default function MapPage() {
       <Section className="relative z-10" spacing="sm">
         <PageShell width="wide">
           {/* HERO */}
-          <section className="grid gap-8 pb-10 pt-6 lg:min-h-[560px] lg:grid-cols-[1fr_500px] lg:items-center">
+          <section className="grid gap-8 pb-10 pt-6 lg:grid-cols-[1fr_500px] lg:items-center">
             <motion.div initial={false} className="space-y-6">
-              <div className="inline-flex items-center gap-2.5 rounded-full border border-cyan-300/20 bg-cyan-300/[0.05] px-4 py-2 backdrop-blur-xl">
-                <Crosshair className="h-4 w-4 text-cyan-300" />
-                <span className="title-font text-[11px] font-bold tracking-[0.32em] text-cyan-300">NATIONAL AGENT RADAR</span>
-                <span className="flex h-1.5 w-1.5 rounded-full bg-cyan-300 shadow-[0_0_10px_rgba(34,211,238,0.8)]">
-                  <span className="absolute h-1.5 w-1.5 animate-ping rounded-full bg-cyan-300" />
-                </span>
+              <div className="inline-flex items-center gap-2.5 rounded-full border border-blue-100 bg-blue-50 px-4 py-2">
+                <Crosshair className="h-4 w-4 text-blue-600" />
+                <span className="title-font text-[11px] font-bold tracking-[0.18em] text-blue-600">全国地图</span>
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
               </div>
-              <h1 className="title-font text-5xl font-black leading-[0.98] tracking-[-0.04em] text-white drop-shadow-[0_0_36px_rgba(34,211,238,0.32)] sm:text-6xl lg:text-7xl">
-                全国 <span className="gradient-text-rb">AI 信号雷达</span>
+              <h1 className="title-font text-5xl font-black leading-[0.98] tracking-[-0.04em] text-gray-950 sm:text-6xl lg:text-7xl">
+                全国 <span className="text-blue-700">AI 玩家地图</span>
               </h1>
-              <p className="max-w-[560px] text-base font-medium text-white/72 sm:text-lg">
-                这里不是普通地图，而是全国 Agent 玩家信号面板。每一张身份卡，都会点亮一个城市信号。
+              <p className="max-w-[560px] text-base font-medium text-gray-600 sm:text-lg">
+                看看不同地区的朋友都在用哪些 AI 工具。当前为早期测试数据，真实数据正在收集中。
               </p>
               <div className="flex flex-wrap gap-3 pt-2">
                 <Link href="/survey" className="btn-rb-fill">
@@ -406,10 +396,10 @@ export default function MapPage() {
                   <span>查看全国排行</span>
                 </Link>
               </div>
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-3 text-[11px] text-white/45">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-3 text-[11px] text-gray-500">
                 <span className="flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-                  实时信号 · 每 4 秒刷新
+                  数据正在收集中
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Activity className="h-3 w-3 text-cyan-300" />
@@ -420,17 +410,20 @@ export default function MapPage() {
                   {overview.total} 位玩家已入图
                 </span>
               </div>
+              <DataNotice>
+                当前为早期工作台数据，真实身份卡记录正在收集中；地图分布会随用户提交自动更新。
+              </DataNotice>
             </motion.div>
 
-            <motion.div initial={false} className="relative overflow-hidden rounded-3xl border border-cyan-300/18 bg-[linear-gradient(135deg,rgba(8,47,73,0.50),rgba(2,6,23,0.78))] p-5 shadow-[0_0_48px_rgba(34,211,238,0.12)] backdrop-blur-xl sm:p-6">
-              <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(34,211,238,0.16),transparent_45%)]" />
+            <motion.div initial={false} className="relative overflow-hidden rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+              <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(37,99,235,0.06),transparent_45%)]" />
               <div className="relative z-10 mb-4 flex items-center justify-between gap-3">
                 <div>
-                  <p className="title-font text-[10px] uppercase tracking-[0.28em] text-cyan-300/70">Live Radar</p>
-                  <h2 className="title-font mt-1 text-xl font-black text-white">全国信号扫描盘</h2>
+                  <p className="title-font text-[10px] tracking-[0.18em] text-blue-600">全国使用概览</p>
+                  <h2 className="title-font mt-1 text-xl font-black text-gray-950">全国使用概览</h2>
                 </div>
-                <span className="rounded-full border border-cyan-300/20 bg-cyan-300/[0.08] px-3 py-1 text-[10px] font-bold text-cyan-200">
-                  ONLINE
+                <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-[10px] font-bold text-blue-700">
+                  已生成
                 </span>
               </div>
               <ProvinceRadar provinces={radarProvinces} totalSignals={overview.total} />
@@ -499,7 +492,7 @@ export default function MapPage() {
             <StableGlassCard tone="emerald">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
-                  <p className="title-font text-[10px] uppercase tracking-[0.28em] text-emerald-300/70">City Signal Flow</p>
+                  <p className="title-font text-[10px] tracking-[0.18em] text-emerald-600">城市动态</p>
                   <h3 className="title-font mt-2 text-lg font-bold text-white">城市信号流</h3>
                 </div>
                 <span className="flex items-center gap-1.5 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-[10px] font-bold text-emerald-300">
@@ -557,7 +550,7 @@ export default function MapPage() {
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
                   <p className="title-font text-[10px] uppercase tracking-[0.28em] text-amber-300/70">Equipment Heat Distribution</p>
-                  <h3 className="title-font mt-2 text-lg font-bold text-white">装备热度分布</h3>
+                  <h3 className="title-font mt-2 text-lg font-bold text-gray-950">热门工具分布</h3>
                 </div>
                 <span className="title-font text-xs text-white/40">TOP {tools.length}</span>
               </div>
@@ -653,19 +646,17 @@ export default function MapPage() {
 
           {/* BOTTOM CTA */}
           <section className="mt-10">
-            <div className="relative overflow-hidden rounded-[28px] border border-cyan-300/20 bg-[linear-gradient(135deg,rgba(34,211,238,0.08),rgba(168,85,247,0.06))] p-8 text-center shadow-[0_0_80px_rgba(34,211,238,0.18)] backdrop-blur-2xl sm:p-12">
-              <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(34,211,238,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(34,211,238,0.04)_1px,transparent_1px)] bg-[size:32px_32px] opacity-50" />
-              <div aria-hidden className="pointer-events-none absolute -top-10 left-1/2 h-40 w-40 -translate-x-1/2 rounded-full bg-cyan-300/30 blur-[100px]" />
+            <div className="relative overflow-hidden rounded-xl border border-neutral-200 bg-neutral-50 p-8 text-center sm:p-10">
               <div className="relative">
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-cyan-300/30 bg-cyan-300/[0.08] px-4 py-1.5">
-                  <Target className="h-3.5 w-3.5 text-cyan-300" />
-                  <span className="title-font text-[10px] font-bold tracking-[0.28em] text-cyan-300">JOIN THE RADAR</span>
+                <div className="mb-4 inline-flex items-center gap-2 rounded border border-neutral-200 bg-white px-3 py-1.5">
+                  <Target className="h-3.5 w-3.5 text-neutral-500" />
+                  <span className="text-xs font-medium text-neutral-500">加入地图</span>
                 </div>
-                <h2 className="title-font text-3xl font-black text-white sm:text-4xl">
-                  你的城市还没有被点亮？
+                <h2 className="text-2xl font-medium text-neutral-950 sm:text-3xl">
+                  想加入玩家地图？
                 </h2>
-                <p className="mx-auto mt-3 max-w-[560px] text-base text-white/65">
-                  生成你的 AI Agent Passport，让你的城市出现在全国信号雷达上。
+                <p className="mx-auto mt-3 max-w-[560px] text-sm leading-6 text-neutral-600">
+                  生成你的 AI 身份卡，让你的城市出现在全国玩家地图上。
                 </p>
                 <div className="mt-7 flex flex-wrap justify-center gap-3">
                   <Link href="/survey" className="btn-rb-fill">

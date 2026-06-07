@@ -6,6 +6,7 @@ import {
   hashText,
   jsonResponse,
   normalizeInput,
+  persistGeneratedImage,
   toCardRecord,
   updateRow,
 } from "../_shared.js";
@@ -43,7 +44,8 @@ export async function onRequestPost(context) {
       scenarios: existing.usage_purpose,
       signature: existing.usage_frequency,
     });
-    const imageUrl = await generateWithSenseNova(apiKey, buildIdentityCardPrompt(input, cardId));
+    const generatedImage = await generateWithSenseNova(apiKey, buildIdentityCardPrompt(input, cardId));
+    const imageUrl = await persistGeneratedImage(context, generatedImage, cardId, origin);
     const updated = await updateRow(env, cardId, { avatar_seed: imageUrl, updated_at: new Date().toISOString() });
     if (!updated.ok) return jsonResponse({ success: false, error: updated.error }, 500);
     return jsonResponse({ success: true, card: toCardRecord(updated.row, origin) }, 200);

@@ -79,5 +79,5 @@ export default function CountUp({
     return () => unsubscribe();
   }, [springValue, formatValue]);
 
-  return <span className={className} ref={ref} />;
+  return <span className={className} ref={ref} suppressHydrationWarning>{formatValue(direction === "down" ? to : from)}</span>;
 }

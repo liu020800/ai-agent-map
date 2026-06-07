@@ -30,6 +30,7 @@ import CountUp from "@/components/react-bits/CountUp";
 import TiltedCard from "@/components/react-bits/TiltedCard";
 import SpotlightCard from "@/components/react-bits/SpotlightCard";
 import { PageShell, Section, SectionHeader, StatCard } from "@/components/ui";
+import { DataNotice } from "@/components/workbench";
 import { buildTrendsFromRanking, getTrends, getCategoryLabel, champion, topRisingTools } from "@/lib/trends-data";
 import { fetchRanking } from "@/lib/api-client";
 import { toolColor } from "@/data/mock";
@@ -71,8 +72,7 @@ const MATRIX_LABEL_TONE: Record<TrendsMatrix["label"], string> = {
 
 function StableTrendPanel({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`relative overflow-hidden rounded-2xl border border-cyan-300/14 bg-[linear-gradient(135deg,rgba(15,23,42,0.80),rgba(2,6,23,0.64))] p-5 shadow-[0_0_34px_rgba(34,211,238,0.10)] backdrop-blur-xl ${className}`}>
-      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:28px_28px] opacity-25" />
+    <div className={`relative overflow-hidden rounded-xl border border-neutral-200 bg-white p-5 ${className}`}>
       <div className="relative z-10">{children}</div>
     </div>
   );
@@ -90,46 +90,38 @@ function TrendRadarPanel({
   return (
     <motion.div
       initial={false}
-      className="relative overflow-hidden rounded-[28px] border border-cyan-300/20 bg-[radial-gradient(circle_at_50%_38%,rgba(34,211,238,0.16),transparent_34%),linear-gradient(135deg,rgba(15,23,42,0.72),rgba(2,6,23,0.62))] p-5 shadow-[0_0_52px_rgba(34,211,238,0.12)] backdrop-blur-2xl"
+      className="relative overflow-hidden rounded-xl border border-neutral-200 bg-white p-5"
     >
-      <div aria-hidden className="absolute inset-0 bg-[linear-gradient(rgba(34,211,238,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(34,211,238,0.08)_1px,transparent_1px)] bg-[size:32px_32px] opacity-35" />
-      <div aria-hidden className="absolute inset-x-0 top-0 h-1/2 animate-[scan_3.2s_linear_infinite] bg-gradient-to-b from-cyan-300/18 via-cyan-300/4 to-transparent" />
-      <div aria-hidden className="absolute -right-20 -top-20 h-60 w-60 rounded-full bg-violet-500/25 blur-3xl" />
 
       <div className="relative z-10 flex items-center justify-between">
         <div>
-          <p className="title-font text-[10px] uppercase tracking-[0.32em] text-cyan-200/75">Live Trend Radar</p>
-          <h2 className="title-font mt-2 text-2xl font-black text-white">装备热力仪表盘</h2>
+          <p className="title-font text-[10px] tracking-[0.18em] text-blue-600">热门工具概览</p>
+          <h2 className="title-font mt-2 text-2xl font-black text-gray-950">热门工具概览</h2>
         </div>
-        <div className="rounded-full border border-emerald-300/30 bg-emerald-300/10 px-3 py-1.5 text-[11px] font-bold text-emerald-200">
-          SIGNAL ONLINE
+        <div className="rounded border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-[11px] text-neutral-500">
+          数据收集中
         </div>
       </div>
 
       <div className="relative z-10 mx-auto mt-6 flex aspect-square max-w-[330px] items-center justify-center">
-        <div className="absolute inset-0 rounded-full border border-cyan-300/25 shadow-[0_0_48px_rgba(34,211,238,0.16)_inset]" />
-        <div className="absolute inset-10 rounded-full border border-violet-300/20" />
-        <div className="absolute inset-20 rounded-full border border-emerald-300/20" />
-        <div className="absolute left-1/2 top-0 h-1/2 w-px origin-bottom animate-[spin_5s_linear_infinite] bg-gradient-to-t from-cyan-300 to-transparent" />
-        <div className="absolute h-px w-full bg-cyan-300/15" />
-        <div className="absolute h-full w-px bg-cyan-300/15" />
+        <div className="absolute inset-0 rounded-full border border-neutral-200" />
+        <div className="absolute inset-10 rounded-full border border-neutral-200" />
+        <div className="absolute inset-20 rounded-full border border-neutral-200" />
+        <div className="absolute h-px w-full bg-neutral-200" />
+        <div className="absolute h-full w-px bg-neutral-200" />
 
         {orbitTools.map((tool, index) => {
           const angle = (index / orbitTools.length) * Math.PI * 2 - Math.PI / 2;
           const x = Math.cos(angle) * 43;
           const y = Math.sin(angle) * 43;
-          const accent = toolColor(tool.name, "#22d3ee");
           return (
             <div
               key={tool.id}
-              className="absolute rounded-full border px-3 py-1 text-[11px] font-semibold text-white shadow-lg backdrop-blur-xl"
+              className="absolute rounded border border-neutral-300 bg-white px-2 py-1 text-[11px] font-medium text-neutral-700"
               style={{
                 left: `${50 + x}%`,
                 top: `${50 + y}%`,
                 transform: "translate(-50%, -50%)",
-                borderColor: `${accent}66`,
-                background: `${accent}18`,
-                boxShadow: `0 0 22px ${accent}33`,
               }}
             >
               {tool.name}
@@ -137,17 +129,17 @@ function TrendRadarPanel({
           );
         })}
 
-        <div className="relative flex h-36 w-36 flex-col items-center justify-center rounded-full border border-cyan-200/35 bg-black/55 text-center shadow-[0_0_60px_rgba(34,211,238,0.28)] backdrop-blur-xl">
-          <p className="title-font text-[10px] uppercase tracking-[0.25em] text-cyan-200/65">Peak Heat</p>
-          <p className="title-font text-5xl font-black text-white">{topTool?.heat ?? 0}</p>
-          <p className="mt-1 text-xs font-semibold text-cyan-200">{topTool?.name ?? "待点亮"}</p>
+        <div className="relative flex h-32 w-32 flex-col items-center justify-center rounded-full border border-neutral-300 bg-neutral-50 text-center">
+          <p className="text-[10px] text-neutral-500">峰值热度</p>
+          <p className="text-4xl font-medium text-neutral-950">{topTool?.heat ?? 0}</p>
+          <p className="mt-1 text-xs font-medium text-neutral-600">{topTool?.name ?? "待点亮"}</p>
         </div>
       </div>
 
       <div className="relative z-10 mt-5 grid gap-3 sm:grid-cols-3">
         {[
-          ["今日新增信号", snapshot.todayNewSignals, "24H SIGNAL", "text-cyan-300/70"],
-          ["热门工具", snapshot.fastestGrowing, "真实装配数", "text-emerald-300/70"],
+          ["今日新增", snapshot.todayNewSignals, "近 24 小时", "text-blue-600"],
+          ["热门工具", snapshot.fastestGrowing, "真实使用人数", "text-emerald-600"],
           ["最活跃场景", snapshot.mostActiveScene, `Agent ${snapshot.agentShare}%`, "text-amber-300/70"],
         ].map(([label, value, sub, toneClass]) => (
           <div key={label} className="rounded-2xl border border-white/10 bg-black/35 p-4 backdrop-blur-xl">
@@ -210,20 +202,23 @@ export default function TrendsPage() {
               initial={false}
               className="relative"
             >
-              <div className="mb-6 inline-flex items-center gap-3 rounded-full border border-cyan-300/20 bg-cyan-300/[0.05] px-5 py-2.5 backdrop-blur-xl">
-                <Radio className="h-4 w-4 text-cyan-300" />
-                <span className="title-font text-[11px] font-bold tracking-[0.32em] text-cyan-300">AI EQUIPMENT BATTLEFIELD</span>
+              <div className="mb-6 inline-flex items-center gap-3 rounded-full border border-blue-100 bg-blue-50 px-5 py-2.5">
+                <Radio className="h-4 w-4 text-blue-600" />
+                <span className="title-font text-[11px] font-bold tracking-[0.18em] text-blue-600">使用趋势</span>
               </div>
 
-              <h1 className="title-font max-w-[780px] text-5xl font-black leading-[0.95] tracking-[-0.04em] text-white drop-shadow-[0_0_32px_rgba(34,211,238,0.35)] sm:text-6xl lg:text-7xl">
-                <span className="gradient-text-rb">AI 装备</span>
+              <h1 className="title-font max-w-[780px] text-5xl font-black leading-[0.95] tracking-[-0.04em] text-gray-950 sm:text-6xl lg:text-7xl">
+                <span className="text-blue-700">AI 工具</span>
                 <br />
-                趋势战场
+                使用趋势
               </h1>
 
-              <p className="mt-7 max-w-[680px] text-lg font-medium leading-8 text-white/78 sm:text-xl">
-                基于真实身份卡提交记录，观察 AI Agent 工具、角色与城市信号的实时分布。
+              <p className="mt-7 max-w-[680px] text-lg font-medium leading-8 text-gray-600 sm:text-xl">
+                看看大家最近更常用哪些工具和场景。
               </p>
+              <DataNotice className="mt-5 max-w-[680px]">
+                当前为早期工作台数据，真实工具趋势正在收集中；新增身份卡后会自动更新这里的排行和矩阵。
+              </DataNotice>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link href="/survey" className="btn-rb-fill">
@@ -232,22 +227,22 @@ export default function TrendsPage() {
                   <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link href="/ranking" className="btn-rb-ghost">
-                  查看装备热力榜
+                  查看工具排行
                   <ArrowUpRight className="h-4 w-4" />
                 </Link>
               </div>
 
               <div className="mt-9 grid gap-3 sm:grid-cols-3">
                 {[
-                  ["扫描节点", snapshot.tools.length, "TOOLS"],
+                  ["统计工具", snapshot.tools.length, "工具"],
                   ["Agent 占比", snapshot.agentShare, "%"],
                   ["峰值热度", topTool?.heat ?? 0, "HEAT"],
                 ].map(([label, value, unit]) => (
                   <div key={label} className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 backdrop-blur-xl">
-                    <p className="text-[10px] uppercase tracking-[0.24em] text-white/38">{label}</p>
-                    <p className="title-font mt-2 text-3xl font-black text-white">
+                    <p className="text-[10px] tracking-[0.16em] text-gray-500">{label}</p>
+                    <p className="title-font mt-2 text-3xl font-black text-gray-950">
                       {value}
-                      <span className="ml-1 text-sm text-cyan-200/60">{unit}</span>
+                      <span className="ml-1 text-sm text-gray-500">{unit}</span>
                     </p>
                   </div>
                 ))}
@@ -267,7 +262,7 @@ export default function TrendsPage() {
             <SectionHeader
               eyebrow="Tool Heat Ranking"
               title="AI 工具热度榜"
-              description="按真实用户装配数排序，热度由当前工具使用人数计算。"
+              description="按真实用户使用人数排序，热度由当前工具使用人数计算。"
               accent="cyan"
               trailing={
                 <Link href="/ranking" className="btn-rb-ghost !px-4 !py-2 !text-xs">
@@ -282,7 +277,7 @@ export default function TrendsPage() {
               <ul className="space-y-2.5">
                 {snapshot.tools.length === 0 && (
                   <li className="rounded-2xl border border-cyan-300/12 bg-cyan-300/[0.04] p-6 text-center text-sm text-cyan-100/75">
-                    暂无真实工具趋势。用户生成身份卡后，这里会自动显示真实装备热度。
+                    暂无真实工具趋势。用户生成身份卡后，这里会自动显示真实工具热度。
                   </li>
                 )}
                 {snapshot.tools.map((tool, index) => {
@@ -445,7 +440,7 @@ export default function TrendsPage() {
             <StableTrendPanel className="p-6">
               <div className="mb-6 flex items-center justify-between">
                 <div>
-                  <p className="title-font text-[10px] uppercase tracking-[0.28em] text-cyan-300/70">7-day Signal Pulse</p>
+                  <p className="title-font text-[10px] tracking-[0.18em] text-blue-600">7 天热度走势</p>
                   <h3 className="title-font mt-2 text-2xl font-black text-white">近 7 天趋势走势</h3>
                 </div>
                 <div className="flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/[0.05] px-4 py-2">
@@ -502,7 +497,7 @@ export default function TrendsPage() {
 
               <div className="mt-6 flex flex-wrap items-center gap-4 text-[10px] uppercase tracking-[0.22em] text-white/45">
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-sm bg-cyan-300" /> 今日新增信号
+                  <span className="h-2 w-2 rounded-sm bg-blue-500" /> 今日新增
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <span className="h-2 w-2 rounded-sm bg-violet-400/80" /> 同时活跃玩家
@@ -558,15 +553,15 @@ export default function TrendsPage() {
           >
             <SectionHeader
               eyebrow="Rising Champions"
-              title="真实热门装备"
-              description="基于用户身份卡里的真实工具装配次数排序。"
+              title="真实热门工具"
+              description="基于用户身份卡里的真实工具使用次数排序。"
               accent="amber"
               className="mb-6"
             />
             <div className="grid gap-4 sm:grid-cols-3">
               {rising.length === 0 && (
                 <div className="col-span-full rounded-2xl border border-amber-300/12 bg-amber-300/[0.04] p-6 text-center text-sm text-amber-100/75">
-                  暂无真实热门装备。
+                  暂无真实热门工具。
                 </div>
               )}
               {rising.map((tool, index) => {
@@ -587,7 +582,7 @@ export default function TrendsPage() {
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="title-font text-base font-black text-white">{tool.name}</p>
-                        <p className="text-[10px] uppercase tracking-[0.22em] text-white/40">#{index + 1} 热门装备</p>
+                        <p className="text-[10px] tracking-[0.16em] text-gray-500">#{index + 1} 热门工具</p>
                       </div>
                       <div className="text-right">
                         <p className="title-font text-xl font-black" style={{ color: accent }}>
@@ -613,7 +608,7 @@ export default function TrendsPage() {
               <Sparkles className="mx-auto h-8 w-8 text-amber-300/60" />
               <h3 className="title-font mt-3 text-2xl font-black text-white">生成你的 AI Agent 身份卡，加入趋势样本</h3>
               <p className="mt-2 max-w-md text-sm text-white/50">
-                选择装备 + 场景 + 地区，30 秒拿到可分享可点亮的 Agent Passport。
+                选择工具、场景和地区，30 秒拿到可分享的 AI 身份卡。
               </p>
               <div className="mt-5 flex justify-center">
                 <Link href="/survey" className="btn-rb-fill">
