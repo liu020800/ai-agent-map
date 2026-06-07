@@ -45,3 +45,5 @@ next-env.d.ts
 .dev.err.log
 .tmp-*.png
 scripts/tmp/
+.wrangler/
+tmp-*.log
